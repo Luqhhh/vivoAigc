@@ -7,12 +7,12 @@
     "apps/web"
   ],
   "scripts": {
-    "dev": "node \"%npm_execpath%\" --filter @codemotion/api dev",
-    "dev:api": "node \"%npm_execpath%\" --filter @codemotion/api dev",
-    "dev:web": "node \"%npm_execpath%\" --filter @codemotion/web dev",
-    "build": "node \"%npm_execpath%\" --filter @codemotion/api build && node \"%npm_execpath%\" --filter @codemotion/web build",
-    "test": "node \"%npm_execpath%\" --filter @codemotion/api test && node \"%npm_execpath%\" --filter @codemotion/web test",
-    "test:api": "node \"%npm_execpath%\" --filter @codemotion/api test",
-    "test:web": "node \"%npm_execpath%\" --filter @codemotion/web test"
+    "dev": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api dev",
+    "dev:api": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api dev",
+    "dev:web": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web dev",
+    "build": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api build && call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web build",
+    "test": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api test && call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web test",
+    "test:api": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api test",
+    "test:web": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web test"
   }
 }
