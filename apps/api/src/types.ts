@@ -1,5 +1,18 @@
 export type PrimitiveValue = string | number | boolean | null;
 
+export interface CodeExample {
+  id: string;
+  title: string;
+  category: "recursion" | "binary-search" | "stack" | "dfs" | "dp";
+  difficulty: "beginner" | "intermediate" | "advanced";
+  concepts: string[];
+  code: string;
+  stdin?: string;
+  expectedVisualization: Array<
+    "timeline" | "stack" | "recursion-tree" | "variables"
+  >;
+}
+
 export interface CodeAnalyzeRequest {
   language: "python";
   code: string;

@@ -314,6 +314,20 @@ describe("CodeMotion API", () => {
     const response = await request(createApp({ llmMode: "mock" }))
       .get("/api/examples")
       .expect(200);
+    const categories = [
+      "recursion",
+      "binary-search",
+      "stack",
+      "dfs",
+      "dp",
+    ];
+    const difficulties = ["beginner", "intermediate", "advanced"];
+    const visualizations = [
+      "timeline",
+      "stack",
+      "recursion-tree",
+      "variables",
+    ];
 
     expect(response.body.examples).toHaveLength(5);
     expect(response.body.examples).toEqual(
@@ -321,6 +335,29 @@ describe("CodeMotion API", () => {
         expect.objectContaining({ id: "fibonacci-recursion" }),
       ]),
     );
+    for (const example of response.body.examples) {
+      expect(example).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          title: expect.any(String),
+          category: expect.any(String),
+          difficulty: expect.any(String),
+          concepts: expect.any(Array),
+          code: expect.any(String),
+          expectedVisualization: expect.any(Array),
+        }),
+      );
+      expect(example.id.length).toBeGreaterThan(0);
+      expect(example.title.length).toBeGreaterThan(0);
+      expect(example.concepts.length).toBeGreaterThan(0);
+      expect(example.code.length).toBeGreaterThan(0);
+      expect(example.expectedVisualization.length).toBeGreaterThan(0);
+      expect(categories).toContain(example.category);
+      expect(difficulties).toContain(example.difficulty);
+      for (const visualization of example.expectedVisualization) {
+        expect(visualizations).toContain(visualization);
+      }
+    }
   });
 
   it("rejects an empty analysis request as recoverable invalid input", async () => {

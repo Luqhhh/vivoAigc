@@ -1,4 +1,4 @@
-import type { CodeAnalyzeResponse } from "./types.js";
+import type { CodeAnalyzeResponse, CodeExample } from "./types.js";
 
 export const fibonacciCode = `def fib(n):
     if n <= 1:
@@ -21,23 +21,36 @@ const binarySearchCode = `def binary_search(items, target):
 
 print(binary_search([1, 3, 5, 7, 9, 11], 7))`;
 
-export const examples = [
+export const examples: CodeExample[] = [
   {
     id: "fibonacci-recursion",
     title: "斐波那契递归",
-    concept: "递归与 base case",
+    category: "recursion",
+    difficulty: "beginner",
+    concepts: ["recursion", "base-case"],
     code: fibonacciCode,
+    expectedVisualization: [
+      "timeline",
+      "stack",
+      "recursion-tree",
+      "variables",
+    ],
   },
   {
     id: "binary-search",
     title: "二分查找",
-    concept: "区间收缩与中点",
+    category: "binary-search",
+    difficulty: "beginner",
+    concepts: ["binary-search", "boundary"],
     code: binarySearchCode,
+    expectedVisualization: ["timeline", "stack", "variables"],
   },
   {
     id: "bracket-stack",
     title: "括号匹配",
-    concept: "栈的压入与弹出",
+    category: "stack",
+    difficulty: "beginner",
+    concepts: ["stack", "matching"],
     code: `def is_valid(text):
     stack = []
     pairs = {')': '(', ']': '[', '}': '{'}
@@ -49,20 +62,44 @@ export const examples = [
     return not stack
 
 print(is_valid('([])'))`,
+    expectedVisualization: ["timeline", "stack", "variables"],
   },
   {
-    id: "running-total",
-    title: "循环求和",
-    concept: "循环与状态更新",
-    code: `total = 0
-for number in range(1, 6):
-    total += number
-print(total)`,
+    id: "depth-first-search",
+    title: "深度优先搜索",
+    category: "dfs",
+    difficulty: "beginner",
+    concepts: ["traversal", "visited"],
+    code: `def dfs(graph, start):
+    visited = set()
+    order = []
+
+    def visit(node):
+        if node in visited:
+            return
+        visited.add(node)
+        order.append(node)
+        for neighbor in graph[node]:
+            visit(neighbor)
+
+    visit(start)
+    return order
+
+graph = {
+    'A': ['B', 'C'],
+    'B': ['D'],
+    'C': ['D'],
+    'D': []
+}
+print(dfs(graph, 'A'))`,
+    expectedVisualization: ["timeline", "stack", "variables"],
   },
   {
     id: "climbing-stairs",
     title: "爬楼梯",
-    concept: "动态规划",
+    category: "dp",
+    difficulty: "intermediate",
+    concepts: ["dp", "state-transition"],
     code: `def climb(n):
     previous, current = 1, 1
     for _ in range(n):
@@ -70,8 +107,9 @@ print(total)`,
     return previous
 
 print(climb(5))`,
+    expectedVisualization: ["timeline", "variables"],
   },
-] as const;
+];
 
 export const fibonacciAnalysis: CodeAnalyzeResponse = {
   requestId: "mock-fibonacci-base",
