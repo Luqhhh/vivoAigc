@@ -1,13 +1,9 @@
 .superpowers/
 .tmp/
 node_modules/
-node_modules
 .pnpm-store/
-.pnpm-store
 dist/
-dist
-apps/*/dist/
-apps/*/dist
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
