@@ -34,21 +34,23 @@ describe("mock analysis provider", () => {
     expect(result.source).toBe("mock");
   });
 
-  it("includes binary-search boundary and midpoint variables", () => {
+  it("narrows binary-search boundaries and midpoint over time", () => {
     const result = analyzeWithMock({
       language: "python",
       code: "def binary_search(items, target):\n    return -1",
     });
-    const variableNames = new Set(
-      result.traceSteps.flatMap((traceStep) =>
-        Object.keys(traceStep.variables),
-      ),
-    );
+    const distinctValueCount = (name: "left" | "right" | "mid") =>
+      new Set(
+        result.traceSteps.flatMap((traceStep) => {
+          const value = traceStep.variables[name];
+          return typeof value === "number" ? [value] : [];
+        }),
+      ).size;
 
     expect(() => codeAnalyzeResponseSchema.parse(result)).not.toThrow();
-    expect(variableNames.has("left")).toBe(true);
-    expect(variableNames.has("right")).toBe(true);
-    expect(variableNames.has("mid")).toBe(true);
+    expect(distinctValueCount("left")).toBeGreaterThanOrEqual(2);
+    expect(distinctValueCount("right")).toBeGreaterThanOrEqual(2);
+    expect(distinctValueCount("mid")).toBeGreaterThanOrEqual(2);
   });
 });
 
