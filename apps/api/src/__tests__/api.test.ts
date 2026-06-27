@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import request from "supertest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createApp } from "../app.js";
 import {
   analyzeWithMock,
   answerWithMockTutor,
@@ -260,5 +262,162 @@ describe("mock tutor provider", () => {
     expect(result.answer).not.toContain("fib(");
     expect(result.answer).not.toContain("二分查找");
     expect(result.answer).not.toContain("base case");
+  });
+});
+
+const originalFetch = globalThis.fetch;
+const originalLlmMode = process.env.LLM_MODE;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  if (originalLlmMode === undefined) {
+    delete process.env.LLM_MODE;
+  } else {
+    process.env.LLM_MODE = originalLlmMode;
+  }
+  vi.restoreAllMocks();
+});
+
+describe("CodeMotion API", () => {
+  it("reports service health and normalized mock mode", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .get("/api/health")
+      .expect(200);
+
+    expect(response.body).toEqual({
+      ok: true,
+      service: "codemotion-api",
+      llmMode: "mock",
+      version: "1.0.0",
+    });
+  });
+
+  it("uses process environment defaults when app options are omitted", async () => {
+    process.env.LLM_MODE = "real";
+
+    const response = await request(createApp()).get("/api/health").expect(200);
+
+    expect(response.body.llmMode).toBe("real");
+  });
+
+  it("reflects the request origin when wildcard CORS is configured", async () => {
+    const origin = "https://frontend.example.test";
+    const response = await request(createApp({ FRONTEND_ORIGIN: "*" }))
+      .get("/api/health")
+      .set("origin", origin)
+      .expect(200);
+
+    expect(response.headers["access-control-allow-origin"]).toBe(origin);
+  });
+
+  it("returns exactly five examples including Fibonacci recursion", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .get("/api/examples")
+      .expect(200);
+
+    expect(response.body.examples).toHaveLength(5);
+    expect(response.body.examples).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "fibonacci-recursion" }),
+      ]),
+    );
+  });
+
+  it("rejects an empty analysis request as recoverable invalid input", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .send({})
+      .expect(400);
+
+    expect(response.body.requestId).toMatch(/^req-/);
+    expect(response.body.error).toMatchObject({
+      code: "INVALID_INPUT",
+      recoverable: true,
+    });
+  });
+
+  it("returns a request-scoped internal error for malformed JSON", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .set("content-type", "application/json")
+      .send('{"language":"python"')
+      .expect(500);
+
+    expect(response.body.requestId).toMatch(/^req-\d+-[a-f0-9]{8}$/);
+    expect(response.body.error).toMatchObject({
+      code: "INTERNAL_ERROR",
+      message: "服务处理请求时发生内部错误，请稍后重试。",
+      recoverable: false,
+    });
+  });
+
+  it("returns the mock Fibonacci trace from the analysis route", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .send({ language: "python", code: fibonacciCode })
+      .expect(200);
+
+    expect(response.body.requestId).toMatch(/^req-\d+-[a-f0-9]{8}$/);
+    expect(response.body.source).toBe("mock");
+    expect(response.body.traceSteps.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("returns tutor references for the requested current step", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/tutor-chat")
+      .send({
+        requestId: "req-http-tutor",
+        code: fibonacciCode,
+        currentStep: 2,
+        analysisSummary: "递归计算 fib(4)。",
+        question: "当前步骤发生了什么？",
+      })
+      .expect(200);
+
+    expect(response.body.referencedSteps).toContain(2);
+    expect(response.body.source).toBe("mock");
+  });
+
+  it("rejects code longer than 200 lines with a suggestion", async () => {
+    const code = Array.from({ length: 201 }, () => "print(1)").join("\n");
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .send({ language: "python", code })
+      .expect(400);
+
+    expect(response.body.error).toMatchObject({
+      code: "CODE_TOO_LONG",
+      recoverable: true,
+    });
+    expect(response.body.error.suggestion).toEqual(expect.any(String));
+    expect(response.body.error.suggestion.length).toBeGreaterThan(0);
+  });
+
+  it("falls back through the real provider path when Lanxin is unavailable", async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new TypeError("network unavailable"));
+    const app = createApp({
+      llmMode: "real",
+      LANXIN_API_URL: "https://lanxin.example.test/v1/chat/completions",
+      LANXIN_APP_ID: "test-app-id",
+      LANXIN_APP_KEY: "test-app-key",
+    });
+
+    const response = await request(app)
+      .post("/api/analyze-code")
+      .send({ language: "python", code: fibonacciCode })
+      .expect(200);
+
+    expect(response.body.requestId).toMatch(/^req-\d+-[a-f0-9]{8}$/);
+    expect(response.body.source).toBe("fallback");
+    expect(response.body.warnings).toEqual(
+      expect.arrayContaining([
+        {
+          code: "MOCK_USED",
+          message: "蓝心真实服务暂不可用，已切换为稳定 mock 演示。",
+        },
+      ]),
+    );
   });
 });
