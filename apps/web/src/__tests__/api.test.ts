@@ -195,6 +195,15 @@ describe("CodeMotion web API client", () => {
     });
   });
 
+  test("propagates network failures without wrapping them", async () => {
+    const networkError = new Error("network unavailable");
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(networkError);
+
+    await expect(fetchHealth()).rejects.toBe(networkError);
+  });
+
   test("throws the API error message from a non-OK JSON response", async () => {
     mockFetch(
       jsonResponse(
