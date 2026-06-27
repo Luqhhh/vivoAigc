@@ -217,4 +217,48 @@ describe("mock tutor provider", () => {
 
     expect(result.referencedSteps).toEqual([1]);
   });
+
+  it("explains binary-search state without applying Fibonacci step metadata", () => {
+    const result = answerWithMockTutor({
+      requestId: "req-binary-tutor",
+      code: "def binary_search(items, target): return 3",
+      currentStep: 7,
+      analysisSummary: "二分查找通过收缩边界定位目标。",
+      question: "这一轮为什么继续查找？",
+    });
+
+    expect(() => tutorChatResponseSchema.parse(result)).not.toThrow();
+    expect(result.requestId).toBe("req-binary-tutor");
+    expect(result.source).toBe("mock");
+    expect(result.referencedSteps).toEqual([7]);
+    expect(result.suggestedFollowups).toHaveLength(3);
+    expect(result.answer).toContain("二分查找");
+    expect(result.answer).toContain("left");
+    expect(result.answer).toContain("right");
+    expect(result.answer).toContain("mid");
+    expect(result.answer).not.toContain("fib(");
+    expect(result.answer).not.toContain("base case");
+  });
+
+  it("answers generic code neutrally when its step collides with Fibonacci", () => {
+    const result = answerWithMockTutor({
+      requestId: "req-generic-tutor",
+      code: "total = 0\nfor number in range(3):\n    total += number",
+      currentStep: 7,
+      analysisSummary: "循环累加每个 number。",
+      question: "当前状态如何变化？",
+    });
+
+    expect(() => tutorChatResponseSchema.parse(result)).not.toThrow();
+    expect(result.requestId).toBe("req-generic-tutor");
+    expect(result.source).toBe("mock");
+    expect(result.referencedSteps).toEqual([7]);
+    expect(result.suggestedFollowups).toHaveLength(3);
+    expect(result.answer).toContain("当前第 7 步");
+    expect(result.answer).toContain("循环累加每个 number。");
+    expect(result.answer).toContain("当前状态如何变化？");
+    expect(result.answer).not.toContain("fib(");
+    expect(result.answer).not.toContain("二分查找");
+    expect(result.answer).not.toContain("base case");
+  });
 });
