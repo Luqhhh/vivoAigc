@@ -63,7 +63,7 @@ function completeTutor(
   source: TutorChatResponse["source"] = "mock",
 ): TutorChatResponse {
   return {
-    requestId: tutorRequest.requestId,
+    requestId: "req-model-controlled",
     answer: "第 2 步正在展开递归调用，需要等待子调用返回。",
     referencedSteps: [2],
     suggestedFollowups: ["哪个子调用会先到达递归出口？"],
@@ -197,6 +197,7 @@ describe("Lanxin provider", () => {
     const result = await answerWithLanxinTutor(tutorRequest, env);
 
     expect(tutorChatResponseSchema.parse(result)).toEqual(result);
+    expect(result.requestId).toBe(tutorRequest.requestId);
     expect(result.source).toBe("lanxin");
     expect(result.referencedSteps).toEqual([2]);
   });

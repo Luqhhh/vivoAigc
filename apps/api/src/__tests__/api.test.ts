@@ -336,18 +336,30 @@ describe("CodeMotion API", () => {
     });
   });
 
-  it("returns a request-scoped internal error for malformed JSON", async () => {
+  it("returns a recoverable invalid JSON error for malformed JSON", async () => {
     const response = await request(createApp({ llmMode: "mock" }))
       .post("/api/analyze-code")
       .set("content-type", "application/json")
       .send('{"language":"python"')
-      .expect(500);
+      .expect(400);
 
     expect(response.body.requestId).toMatch(/^req-\d+-[a-f0-9]{8}$/);
     expect(response.body.error).toMatchObject({
-      code: "INTERNAL_ERROR",
-      message: "服务处理请求时发生内部错误，请稍后重试。",
-      recoverable: false,
+      code: "INVALID_JSON",
+      recoverable: true,
+    });
+  });
+
+  it("returns a recoverable payload-too-large error above 64kb", async () => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .send({ language: "python", code: "x".repeat(65 * 1024) })
+      .expect(413);
+
+    expect(response.body.requestId).toMatch(/^req-\d+-[a-f0-9]{8}$/);
+    expect(response.body.error).toMatchObject({
+      code: "PAYLOAD_TOO_LARGE",
+      recoverable: true,
     });
   });
 
@@ -376,6 +388,33 @@ describe("CodeMotion API", () => {
 
     expect(response.body.referencedSteps).toContain(2);
     expect(response.body.source).toBe("mock");
+  });
+
+  it("marks a real-mode tutor provider failure as fallback", async () => {
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new TypeError("network unavailable"));
+    const app = createApp({
+      llmMode: "real",
+      LANXIN_API_URL: "https://lanxin.example.test/v1/chat/completions",
+      LANXIN_APP_ID: "test-app-id",
+      LANXIN_APP_KEY: "test-app-key",
+    });
+
+    const response = await request(app)
+      .post("/api/tutor-chat")
+      .send({
+        requestId: "req-real-tutor-fallback",
+        code: fibonacciCode,
+        currentStep: 2,
+        analysisSummary: "递归计算 fib(4)。",
+        question: "当前步骤发生了什么？",
+      })
+      .expect(200);
+
+    expect(response.body.requestId).toBe("req-real-tutor-fallback");
+    expect(response.body.referencedSteps).toContain(2);
+    expect(response.body.source).toBe("fallback");
   });
 
   it("rejects code longer than 200 lines with a suggestion", async () => {

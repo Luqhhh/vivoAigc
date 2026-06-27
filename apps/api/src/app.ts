@@ -156,6 +156,11 @@ export function createApp(options: AppOptions = {}) {
             if (!(error instanceof LanxinProviderError)) {
               throw error;
             }
+
+            return res.json({
+              ...answerWithMockTutor(input),
+              source: "fallback",
+            });
           }
         }
 
@@ -168,6 +173,27 @@ export function createApp(options: AppOptions = {}) {
 
   app.use(
     (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+      const bodyParserErrorType =
+        typeof error === "object" && error !== null && "type" in error
+          ? (error as { type?: unknown }).type
+          : undefined;
+
+      if (bodyParserErrorType === "entity.parse.failed") {
+        return apiError(res, 400, {
+          code: "INVALID_JSON",
+          message: "请求体不是有效的 JSON。",
+          suggestion: "请检查 JSON 语法后重试。",
+        });
+      }
+
+      if (bodyParserErrorType === "entity.too.large") {
+        return apiError(res, 413, {
+          code: "PAYLOAD_TOO_LARGE",
+          message: "请求体超过 64kb 大小限制。",
+          suggestion: "请缩短代码或标准输入后重试。",
+        });
+      }
+
       if (error instanceof ZodError) {
         return apiError(res, 400, {
           code: "INVALID_INPUT",

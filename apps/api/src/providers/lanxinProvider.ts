@@ -182,7 +182,10 @@ export async function answerWithLanxinTutor(
 ): Promise<TutorChatResponse> {
   try {
     const value = await requestLanxin(buildTutorPrompt(request), env);
-    return tutorChatResponseSchema.parse(forceLanxinSource(value));
+    return tutorChatResponseSchema.parse({
+      ...forceLanxinSource(value),
+      requestId: request.requestId,
+    });
   } catch (error) {
     if (error instanceof LanxinProviderError) {
       throw error;
