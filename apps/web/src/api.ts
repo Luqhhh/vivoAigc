@@ -1,3 +1,11 @@
+import type { ZodType } from "zod";
+
+import {
+  codeAnalyzeResponseSchema,
+  examplesResponseSchema,
+  healthResponseSchema,
+  tutorChatResponseSchema,
+} from "./schemas";
 import type {
   CodeAnalyzeResponse,
   CodeExample,
@@ -5,6 +13,8 @@ import type {
   TutorChatRequest,
   TutorChatResponse,
 } from "./types";
+
+const INVALID_RESPONSE_MESSAGE = "服务返回的数据格式不正确";
 
 function getApiErrorMessage(payload: unknown): string | undefined {
   if (typeof payload !== "object" || payload === null || !("error" in payload)) {
@@ -21,7 +31,7 @@ function getApiErrorMessage(payload: unknown): string | undefined {
     : undefined;
 }
 
-async function parseJson<T>(response: Response): Promise<T> {
+async function parseJson(response: Response): Promise<unknown> {
   let payload: unknown;
 
   try {
@@ -31,30 +41,42 @@ async function parseJson<T>(response: Response): Promise<T> {
       throw new Error("请求失败");
     }
 
-    throw error;
+    throw new Error(INVALID_RESPONSE_MESSAGE);
   }
 
   if (!response.ok) {
     throw new Error(getApiErrorMessage(payload) ?? "请求失败");
   }
 
-  return payload as T;
+  return payload;
+}
+
+function validatePayload<T>(schema: ZodType<T>, payload: unknown): T {
+  const result = schema.safeParse(payload);
+  if (!result.success) {
+    throw new Error(INVALID_RESPONSE_MESSAGE);
+  }
+
+  return result.data;
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
-  return parseJson(await fetch("/api/health"));
+  const payload = await parseJson(await fetch("/api/health"));
+
+  return validatePayload(healthResponseSchema, payload);
 }
 
 export async function fetchExamples(): Promise<CodeExample[]> {
-  const response = await parseJson<{ examples: CodeExample[] }>(
-    await fetch("/api/examples"),
+  const response = validatePayload(
+    examplesResponseSchema,
+    await parseJson(await fetch("/api/examples")),
   );
 
   return response.examples;
 }
 
 export async function analyzeCode(code: string): Promise<CodeAnalyzeResponse> {
-  return parseJson(
+  const payload = await parseJson(
     await fetch("/api/analyze-code", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -66,16 +88,20 @@ export async function analyzeCode(code: string): Promise<CodeAnalyzeResponse> {
       }),
     }),
   );
+
+  return validatePayload(codeAnalyzeResponseSchema, payload);
 }
 
 export async function askTutor(
   params: TutorChatRequest,
 ): Promise<TutorChatResponse> {
-  return parseJson(
+  const payload = await parseJson(
     await fetch("/api/tutor-chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(params),
     }),
   );
+
+  return validatePayload(tutorChatResponseSchema, payload);
 }

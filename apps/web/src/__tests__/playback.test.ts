@@ -90,6 +90,41 @@ describe("playback helpers", () => {
     expect(clampStepIndex(5, { ...analysis, traceSteps: [] })).toBe(0);
   });
 
+  test("treats non-finite indexes as zero", () => {
+    expect(clampStepIndex(Number.NaN, analysis)).toBe(0);
+    expect(clampStepIndex(Number.POSITIVE_INFINITY, analysis)).toBe(0);
+    expect(clampStepIndex(Number.NEGATIVE_INFINITY, analysis)).toBe(0);
+  });
+
+  test("truncates fractional indexes before clamping", () => {
+    const threeStepAnalysis: CodeAnalyzeResponse = {
+      ...analysis,
+      traceSteps: [
+        ...analysis.traceSteps,
+        {
+          step: 30,
+          line: 3,
+          event: "end",
+          description: "End execution.",
+          variables: { n: 1 },
+          changedVariables: [],
+        },
+      ],
+    };
+
+    expect(clampStepIndex(1.9, threeStepAnalysis)).toBe(1);
+  });
+
+  test("handles an empty trace when deriving current state", () => {
+    const emptyAnalysis: CodeAnalyzeResponse = {
+      ...analysis,
+      traceSteps: [],
+    };
+
+    expect(getCurrentTraceStep(0, emptyAnalysis)).toBeUndefined();
+    expect(getCurrentStackFrames(0, emptyAnalysis)).toEqual([]);
+  });
+
   test("returns the selected trace step after clamping", () => {
     expect(getCurrentTraceStep(99, analysis)).toBe(analysis.traceSteps[1]);
   });

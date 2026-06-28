@@ -204,6 +204,51 @@ describe("CodeMotion web API client", () => {
     await expect(fetchHealth()).rejects.toBe(networkError);
   });
 
+  test("uses a stable validation error for malformed successful JSON", async () => {
+    mockFetch(
+      new Response("{not-json", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(fetchHealth()).rejects.toThrow(
+      "服务返回的数据格式不正确",
+    );
+  });
+
+  test("rejects a wrong-shape health response", async () => {
+    mockFetch(jsonResponse({ ok: "yes" }));
+
+    await expect(fetchHealth()).rejects.toThrow(
+      "服务返回的数据格式不正确",
+    );
+  });
+
+  test("rejects a wrong-shape examples response", async () => {
+    mockFetch(jsonResponse({ examples: [{}] }));
+
+    await expect(fetchExamples()).rejects.toThrow(
+      "服务返回的数据格式不正确",
+    );
+  });
+
+  test("rejects a wrong-shape analysis response", async () => {
+    mockFetch(jsonResponse({ requestId: "req-analysis" }));
+
+    await expect(analyzeCode("total = 1")).rejects.toThrow(
+      "服务返回的数据格式不正确",
+    );
+  });
+
+  test("rejects a wrong-shape tutor response", async () => {
+    mockFetch(jsonResponse({ requestId: "req-analysis" }));
+
+    await expect(askTutor(tutorRequest)).rejects.toThrow(
+      "服务返回的数据格式不正确",
+    );
+  });
+
   test("throws the API error message from a non-OK JSON response", async () => {
     mockFetch(
       jsonResponse(

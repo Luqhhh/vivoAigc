@@ -8,7 +8,12 @@ export function clampStepIndex(
     return 0;
   }
 
-  return Math.min(Math.max(index, 0), analysis.traceSteps.length - 1);
+  const normalizedIndex = Number.isFinite(index) ? Math.trunc(index) : 0;
+
+  return Math.min(
+    Math.max(normalizedIndex, 0),
+    analysis.traceSteps.length - 1,
+  );
 }
 
 export function nextStepIndex(
@@ -28,7 +33,7 @@ export function previousStepIndex(
 export function getCurrentTraceStep(
   index: number,
   analysis: CodeAnalyzeResponse,
-): TraceStep {
+): TraceStep | undefined {
   return analysis.traceSteps[clampStepIndex(index, analysis)];
 }
 
@@ -36,9 +41,13 @@ export function getCurrentStackFrames(
   index: number,
   analysis: CodeAnalyzeResponse,
 ): StackFrame[] {
-  const step = getCurrentTraceStep(index, analysis).step;
+  const traceStep = getCurrentTraceStep(index, analysis);
+  if (!traceStep) {
+    return [];
+  }
 
   return (
-    analysis.stackFrames.find((snapshot) => snapshot.step === step)?.frames ?? []
+    analysis.stackFrames.find((snapshot) => snapshot.step === traceStep.step)
+      ?.frames ?? []
   );
 }
