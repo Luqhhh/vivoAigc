@@ -145,6 +145,7 @@ function mockFetch(response: Response): ReturnType<typeof vi.fn<typeof fetch>> {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -193,6 +194,29 @@ describe("CodeMotion web API client", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(tutorRequest),
     });
+  });
+
+  test("uses the configured API base URL for every endpoint", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.example.com/");
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(health))
+      .mockResolvedValueOnce(jsonResponse({ examples }))
+      .mockResolvedValueOnce(jsonResponse(analysis))
+      .mockResolvedValueOnce(jsonResponse(tutorResponse));
+    globalThis.fetch = fetchMock;
+
+    await fetchHealth();
+    await fetchExamples();
+    await analyzeCode("total = 1");
+    await askTutor(tutorRequest);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://api.example.com/api/health",
+      "https://api.example.com/api/examples",
+      "https://api.example.com/api/analyze-code",
+      "https://api.example.com/api/tutor-chat",
+    ]);
   });
 
   test("propagates network failures without wrapping them", async () => {

@@ -310,6 +310,59 @@ describe("CodeMotion API", () => {
     expect(response.headers["access-control-allow-origin"]).toBe(origin);
   });
 
+  it("allows every origin in a comma-separated CORS configuration", async () => {
+    const app = createApp({
+      FRONTEND_ORIGIN:
+        "https://web.example.test, https://localhost",
+    });
+
+    for (const origin of ["https://web.example.test", "https://localhost"]) {
+      const response = await request(app)
+        .get("/api/health")
+        .set("origin", origin)
+        .expect(200);
+
+      expect(response.headers["access-control-allow-origin"]).toBe(origin);
+    }
+  });
+
+  it("does not grant CORS access to an origin outside the configured list", async () => {
+    const response = await request(
+      createApp({
+        FRONTEND_ORIGIN:
+          "https://web.example.test,https://localhost",
+      }),
+    )
+      .get("/api/health")
+      .set("origin", "https://unlisted.example.test")
+      .expect(200);
+
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  it("keeps requests without an Origin header available", async () => {
+    const response = await request(
+      createApp({
+        FRONTEND_ORIGIN:
+          "https://web.example.test,https://localhost",
+      }),
+    )
+      .get("/api/health")
+      .expect(200);
+
+    expect(response.body.ok).toBe(true);
+  });
+
+  it("keeps a single exact CORS origin compatible", async () => {
+    const origin = "https://web.example.test";
+    const response = await request(createApp({ FRONTEND_ORIGIN: origin }))
+      .get("/api/health")
+      .set("origin", origin)
+      .expect(200);
+
+    expect(response.headers["access-control-allow-origin"]).toBe(origin);
+  });
+
   it("returns exactly five examples including Fibonacci recursion", async () => {
     const response = await request(createApp({ llmMode: "mock" }))
       .get("/api/examples")

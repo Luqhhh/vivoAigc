@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { ZodError } from "zod";
 
@@ -51,6 +51,23 @@ function createRequestId(): string {
   return `req-${Date.now()}-${randomBytes(4).toString("hex")}`;
 }
 
+function corsOrigin(frontendOrigin: string): CorsOptions["origin"] {
+  if (frontendOrigin.trim() === "*") {
+    return true;
+  }
+
+  const allowedOrigins = new Set(
+    frontendOrigin
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
+
+  return (origin, callback) => {
+    callback(null, origin === undefined || allowedOrigins.has(origin));
+  };
+}
+
 function apiError(
   res: Response,
   status: number,
@@ -73,9 +90,7 @@ export function createApp(options: AppOptions = {}) {
     res.locals.requestId = createRequestId();
     next();
   });
-  app.use(
-    cors({ origin: env.FRONTEND_ORIGIN === "*" ? true : env.FRONTEND_ORIGIN }),
-  );
+  app.use(cors({ origin: corsOrigin(env.FRONTEND_ORIGIN) }));
   app.use(express.json({ limit: "64kb" }));
 
   app.get("/api/health", (_req, res) => {

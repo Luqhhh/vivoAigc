@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import type { ZodType } from "zod";
 
 import {
@@ -15,6 +17,15 @@ import type {
 } from "./types";
 
 const INVALID_RESPONSE_MESSAGE = "服务返回的数据格式不正确";
+
+function apiUrl(path: string): string {
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
+    /\/+$/,
+    "",
+  );
+
+  return `${baseUrl}${path}`;
+}
 
 function getApiErrorMessage(payload: unknown): string | undefined {
   if (typeof payload !== "object" || payload === null || !("error" in payload)) {
@@ -61,7 +72,7 @@ function validatePayload<T>(schema: ZodType<T>, payload: unknown): T {
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {
-  const payload = await parseJson(await fetch("/api/health"));
+  const payload = await parseJson(await fetch(apiUrl("/api/health")));
 
   return validatePayload(healthResponseSchema, payload);
 }
@@ -69,7 +80,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
 export async function fetchExamples(): Promise<CodeExample[]> {
   const response = validatePayload(
     examplesResponseSchema,
-    await parseJson(await fetch("/api/examples")),
+    await parseJson(await fetch(apiUrl("/api/examples"))),
   );
 
   return response.examples;
@@ -77,7 +88,7 @@ export async function fetchExamples(): Promise<CodeExample[]> {
 
 export async function analyzeCode(code: string): Promise<CodeAnalyzeResponse> {
   const payload = await parseJson(
-    await fetch("/api/analyze-code", {
+    await fetch(apiUrl("/api/analyze-code"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -96,7 +107,7 @@ export async function askTutor(
   params: TutorChatRequest,
 ): Promise<TutorChatResponse> {
   const payload = await parseJson(
-    await fetch("/api/tutor-chat", {
+    await fetch(apiUrl("/api/tutor-chat"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(params),
