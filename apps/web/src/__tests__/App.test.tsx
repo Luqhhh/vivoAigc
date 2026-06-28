@@ -275,6 +275,34 @@ describe("CodeMotion application", () => {
     expect(await screen.findByText("模拟服务")).toBeInTheDocument();
   });
 
+  test("hides playback controls before code has been analyzed", () => {
+    render(<App />);
+
+    expect(screen.queryByLabelText("播放控制")).not.toBeInTheDocument();
+  });
+
+  test("restores default code and clears analysis state", async () => {
+    render(<App />);
+    const editor = screen.getByLabelText("Python 代码") as HTMLTextAreaElement;
+    const defaultCode = editor.value;
+    fireEvent.change(editor, { target: { value: "print('changed')" } });
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "这一步发生了什么？" }));
+    expect(await screen.findByText("当前步骤建立了第一次函数调用。"))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText("播放控制")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "恢复默认代码" }));
+
+    expect(editor).toHaveValue(defaultCode);
+    expect(screen.queryByText(analysis.summary)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("播放控制")).not.toBeInTheDocument();
+    expect(screen.queryByText("当前步骤建立了第一次函数调用。"))
+      .not.toBeInTheDocument();
+    expect(screen.getByText("运行分析后，这里会显示执行时间轴。"))
+      .toBeInTheDocument();
+  });
+
   test("loads examples and resets prior analysis when an example is selected", async () => {
     render(<App />);
     await analyzeCurrentCode();

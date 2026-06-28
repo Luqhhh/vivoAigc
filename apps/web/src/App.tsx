@@ -111,6 +111,7 @@ interface CodeEditorProps {
   error?: string;
   onChange: (code: string) => void;
   onAnalyze: () => void;
+  onReset: () => void;
 }
 
 function CodeEditor(props: CodeEditorProps) {
@@ -132,16 +133,21 @@ function CodeEditor(props: CodeEditorProps) {
         spellCheck={false}
       />
       {props.error && <p className="inline-error" role="alert">{props.error}</p>}
-      <button
-        className="primary-command"
-        type="button"
-        onClick={props.onAnalyze}
-        disabled={props.loading}
-        aria-label={props.loading ? "分析中" : props.error?.startsWith("分析暂时") ? "重新分析" : "分析代码"}
-      >
-        {props.loading ? <LoaderCircle className="spin" aria-hidden="true" /> : props.error?.startsWith("分析暂时") ? <RotateCcw aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
-        <span>{props.loading ? "分析中" : props.error?.startsWith("分析暂时") ? "重新分析" : "分析代码"}</span>
-      </button>
+      <div className="editor-actions">
+        <button className="secondary-command" type="button" onClick={props.onReset} disabled={props.loading} aria-label="恢复默认代码" title="恢复默认代码">
+          <RotateCcw aria-hidden="true" /><span>恢复默认代码</span>
+        </button>
+        <button
+          className="primary-command"
+          type="button"
+          onClick={props.onAnalyze}
+          disabled={props.loading}
+          aria-label={props.loading ? "分析中" : props.error?.startsWith("分析暂时") ? "重新分析" : "分析代码"}
+        >
+          {props.loading ? <LoaderCircle className="spin" aria-hidden="true" /> : props.error?.startsWith("分析暂时") ? <RotateCcw aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
+          <span>{props.loading ? "分析中" : props.error?.startsWith("分析暂时") ? "重新分析" : "分析代码"}</span>
+        </button>
+      </div>
     </section>
   );
 }
@@ -401,6 +407,10 @@ export default function App() {
     setCode(example.code); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setMessages([]); setAnalysisError(undefined); setTutorError(undefined); setTab("workbench"); setView("timeline");
   }
 
+  function resetWorkbench() {
+    setCode(DEFAULT_CODE); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setSpeed(1); setView("timeline"); setMessages([]); setAnalysisError(undefined); setTutorError(undefined); setTutorLoading(false); setQuestion("");
+  }
+
   function jumpToStep(step: number) {
     if (!analysis) return;
     const index = analysis.traceSteps.findIndex((item) => item.step === step);
@@ -408,15 +418,15 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${analysis ? " has-playback" : ""}`}>
       <header className="topbar"><div className="brand"><span className="brand-mark"><Code2 aria-hidden="true" /></span><div><strong>CodeMotion</strong><span>Python 执行实验室</span></div></div><div className="topbar-status"><span className="language-tag">Python</span><ServiceBadge status={service} /></div></header>
       <main>
-        {tab === "workbench" && <>{analysis && <AnalysisSummary analysis={analysis} />}<div className="workbench-grid"><CodeEditor code={code} loading={analysisLoading} error={analysisError} onChange={(value) => { setCode(value); setAnalysisError(undefined); }} onAnalyze={runAnalyze} /><Visualizer analysis={analysis} view={view} stepIndex={currentStep} onViewChange={setView} onJump={jumpToStep} /><TutorPanel messages={messages} question={question} loading={tutorLoading} error={tutorError} disabled={!analysis} onQuestionChange={setQuestion} onSend={sendTutor} onStepClick={jumpToStep} /></div></>}
+        {tab === "workbench" && <>{analysis && <AnalysisSummary analysis={analysis} />}<div className="workbench-grid"><CodeEditor code={code} loading={analysisLoading} error={analysisError} onChange={(value) => { setCode(value); setAnalysisError(undefined); }} onAnalyze={runAnalyze} onReset={resetWorkbench} /><Visualizer analysis={analysis} view={view} stepIndex={currentStep} onViewChange={setView} onJump={jumpToStep} /><TutorPanel messages={messages} question={question} loading={tutorLoading} error={tutorError} disabled={!analysis} onQuestionChange={setQuestion} onSend={sendTutor} onStepClick={jumpToStep} /></div></>}
         {tab === "examples" && <Examples examples={examples} loading={examplesLoading} onSelect={selectExample} />}
         {tab === "practice" && <Practice recommendations={recommendations} onReturn={() => setTab("workbench")} />}
         {tab === "about" && <About service={service} />}
       </main>
-      <PlaybackControls analysis={analysis} index={currentStep} playing={playing} speed={speed} onPrevious={() => { setCurrentStep((index) => previousStepIndex(index, analysis)); setPlaying(false); }} onToggle={() => setPlaying((value) => !value)} onNext={() => { setCurrentStep((index) => nextStepIndex(index, analysis)); setPlaying(false); }} onSpeed={setSpeed} />
+      {analysis && <PlaybackControls analysis={analysis} index={currentStep} playing={playing} speed={speed} onPrevious={() => { setCurrentStep((index) => previousStepIndex(index, analysis)); setPlaying(false); }} onToggle={() => setPlaying((value) => !value)} onNext={() => { setCurrentStep((index) => nextStepIndex(index, analysis)); setPlaying(false); }} onSpeed={setSpeed} />}
       <BottomNavigation active={tab} onChange={setTab} />
     </div>
   );
