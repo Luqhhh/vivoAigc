@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -360,12 +360,18 @@ export default function App() {
   const [tutorError, setTutorError] = useState<string>();
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<TutorMessage[]>([]);
+  const analysisGeneration = useRef(0);
+  const tutorGeneration = useRef(0);
 
   useEffect(() => {
     let active = true;
     fetchHealth().then((result) => { if (active) setService(result.ok ? result.llmMode : "offline"); }).catch(() => { if (active) setService("offline"); });
     fetchExamples().then((result) => { if (active) setExamples(result); }).catch(() => { if (active) setExamples([]); }).finally(() => { if (active) setExamplesLoading(false); });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      analysisGeneration.current += 1;
+      tutorGeneration.current += 1;
+    };
   }, []);
 
   useEffect(() => {
@@ -382,33 +388,46 @@ export default function App() {
     if (!trimmed) { setAnalysisError("请输入 Python 代码。"); return; }
     if (code.length > 12000) { setAnalysisError("代码不能超过 12000 个字符。"); return; }
     if (code.split("\n").length > 200) { setAnalysisError("代码不能超过 200 行。"); return; }
+    const generation = ++analysisGeneration.current;
     setAnalysisLoading(true); setAnalysisError(undefined); setPlaying(false);
     try {
       const result = await analyzeCode(code);
-      setAnalysis(result); setCurrentStep(0); setView("timeline"); setMessages([]); setTutorError(undefined); setQuestion("");
-    } catch { setAnalysisError("分析暂时失败，请稍后重试。"); }
-    finally { setAnalysisLoading(false); }
+      if (generation !== analysisGeneration.current) return;
+      tutorGeneration.current += 1;
+      setAnalysis(result); setCurrentStep(0); setView("timeline"); setMessages([]); setTutorLoading(false); setTutorError(undefined); setQuestion("");
+    } catch {
+      if (generation === analysisGeneration.current) setAnalysisError("分析暂时失败，请稍后重试。");
+    } finally {
+      if (generation === analysisGeneration.current) setAnalysisLoading(false);
+    }
   }
 
   async function sendTutor(prompt = question) {
     const normalized = prompt.trim();
     if (!analysis || tutorLoading || !normalized) return;
     if (normalized.length > 500) { setTutorError("问题不能超过 500 个字符。"); return; }
+    const generation = ++tutorGeneration.current;
     const userMessage: TutorMessage = { role: "user", content: normalized };
     setMessages((items) => [...items, userMessage]); setTutorLoading(true); setTutorError(undefined); setQuestion("");
     try {
       const response = await askTutor({ requestId: analysis.requestId, code, currentStep: getCurrentTraceStep(currentStep, analysis)?.step, analysisSummary: analysis.summary, question: normalized });
+      if (generation !== tutorGeneration.current) return;
       setMessages((items) => [...items, { role: "assistant", content: response.answer, referencedSteps: response.referencedSteps }]);
-    } catch { setTutorError("导师暂时无法回答，请稍后重试。"); }
-    finally { setTutorLoading(false); }
+    } catch {
+      if (generation === tutorGeneration.current) setTutorError("导师暂时无法回答，请稍后重试。");
+    } finally {
+      if (generation === tutorGeneration.current) setTutorLoading(false);
+    }
   }
 
   function selectExample(example: CodeExample) {
-    setCode(example.code); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setMessages([]); setAnalysisError(undefined); setTutorError(undefined); setTab("workbench"); setView("timeline");
+    analysisGeneration.current += 1; tutorGeneration.current += 1;
+    setCode(example.code); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setMessages([]); setAnalysisLoading(false); setAnalysisError(undefined); setTutorLoading(false); setTutorError(undefined); setTab("workbench"); setView("timeline");
   }
 
   function resetWorkbench() {
-    setCode(DEFAULT_CODE); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setSpeed(1); setView("timeline"); setMessages([]); setAnalysisError(undefined); setTutorError(undefined); setTutorLoading(false); setQuestion("");
+    analysisGeneration.current += 1; tutorGeneration.current += 1;
+    setCode(DEFAULT_CODE); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setSpeed(1); setView("timeline"); setMessages([]); setAnalysisLoading(false); setAnalysisError(undefined); setTutorError(undefined); setTutorLoading(false); setQuestion("");
   }
 
   function jumpToStep(step: number) {

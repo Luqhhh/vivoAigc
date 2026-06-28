@@ -303,6 +303,74 @@ describe("CodeMotion application", () => {
       .toBeInTheDocument();
   });
 
+  test("ignores a tutor response that completes after reset", async () => {
+    let resolveTutor!: (response: Response) => void;
+    tutorHandler = () =>
+      new Promise<Response>((resolve) => {
+        resolveTutor = resolve;
+      });
+    const { container } = render(<App />);
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "这一步发生了什么？" }));
+    expect(screen.getByText("导师正在整理回答…")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "恢复默认代码" }));
+    await act(async () => resolveTutor(jsonResponse({
+      requestId: analysis.requestId,
+      answer: "这条旧回答不应出现。",
+      referencedSteps: [1],
+      suggestedFollowups: [],
+      source: "mock",
+    })));
+
+    expect(screen.queryByText("这条旧回答不应出现。")).not.toBeInTheDocument();
+    expect(container.querySelector(".message")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("ignores a tutor error that rejects after reset", async () => {
+    let rejectTutor!: (reason: Error) => void;
+    tutorHandler = () =>
+      new Promise<Response>((_resolve, reject) => {
+        rejectTutor = reject;
+      });
+    const { container } = render(<App />);
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "这一步发生了什么？" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "恢复默认代码" }));
+    await act(async () => rejectTutor(new Error("stale tutor failure")));
+
+    expect(container.querySelector(".message")).not.toBeInTheDocument();
+    expect(screen.queryByText("导师暂时无法回答，请稍后重试。"))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("ignores an analysis response after an example is loaded", async () => {
+    let resolveAnalyze!: (response: Response) => void;
+    analyzeHandler = () =>
+      new Promise<Response>((resolve) => {
+        resolveAnalyze = resolve;
+      });
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "分析代码" }));
+    expect(screen.getByRole("button", { name: "分析中" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "示例" }));
+    expect(await screen.findByText("二分查找目标值")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "载入二分查找目标值" }));
+    expect(screen.getByLabelText("Python 代码")).toHaveValue(examples[0].code);
+
+    await act(async () => resolveAnalyze(jsonResponse(analysis)));
+
+    expect(screen.getByLabelText("Python 代码")).toHaveValue(examples[0].code);
+    expect(screen.queryByText(analysis.summary)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("播放控制")).not.toBeInTheDocument();
+    expect(screen.getByText("运行分析后，这里会显示执行时间轴。"))
+      .toBeInTheDocument();
+  });
+
   test("loads examples and resets prior analysis when an example is selected", async () => {
     render(<App />);
     await analyzeCurrentCode();
