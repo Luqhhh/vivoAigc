@@ -363,6 +363,26 @@ describe("CodeMotion API", () => {
     expect(response.headers["access-control-allow-origin"]).toBe(origin);
   });
 
+  it("allows Capacitor JSON POST preflight requests", async () => {
+    const response = await request(
+      createApp({ FRONTEND_ORIGIN: "https://localhost" }),
+    )
+      .options("/api/analyze-code")
+      .set("Origin", "https://localhost")
+      .set("Access-Control-Request-Method", "POST")
+      .set("Access-Control-Request-Headers", "content-type")
+      .expect(204);
+
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "https://localhost",
+    );
+    expect(response.headers["access-control-allow-headers"]).toBe(
+      "content-type",
+    );
+    expect(response.headers["access-control-allow-methods"])
+      .toContain("POST");
+  });
+
   it("returns exactly five examples including Fibonacci recursion", async () => {
     const response = await request(createApp({ llmMode: "mock" }))
       .get("/api/examples")

@@ -17,14 +17,33 @@ import type {
 } from "./types";
 
 const INVALID_RESPONSE_MESSAGE = "服务返回的数据格式不正确";
+const INVALID_API_BASE_URL_MESSAGE =
+  "VITE_API_BASE_URL must be a public HTTP(S) origin without credentials, path, query, or hash.";
+
+function apiBaseUrl(): string {
+  const configuredUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+  if (configuredUrl.length === 0) {
+    return "";
+  }
+
+  let url: URL;
+  try {
+    url = new URL(configuredUrl);
+  } catch {
+    throw new Error(INVALID_API_BASE_URL_MESSAGE);
+  }
+
+  const isHttpOrigin = url.protocol === "http:" || url.protocol === "https:";
+  const isBareOrigin = url.href === `${url.origin}/`;
+  if (!isHttpOrigin || url.username || url.password || !isBareOrigin) {
+    throw new Error(INVALID_API_BASE_URL_MESSAGE);
+  }
+
+  return url.origin;
+}
 
 function apiUrl(path: string): string {
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
-    /\/+$/,
-    "",
-  );
-
-  return `${baseUrl}${path}`;
+  return `${apiBaseUrl()}${path}`;
 }
 
 function getApiErrorMessage(payload: unknown): string | undefined {

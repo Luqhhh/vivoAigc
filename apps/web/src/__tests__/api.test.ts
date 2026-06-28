@@ -219,6 +219,44 @@ describe("CodeMotion web API client", () => {
     ]);
   });
 
+  test("trims whitespace around a configured API origin", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "  https://api.example.com/  ");
+    const fetchMock = mockFetch(jsonResponse(health));
+
+    await fetchHealth();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/health",
+    );
+  });
+
+  test("uses relative API paths for a whitespace-only configuration", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "  \t ");
+    const fetchMock = mockFetch(jsonResponse(health));
+
+    await fetchHealth();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/health");
+  });
+
+  test.each([
+    ["a non-HTTP(S) protocol", "capacitor://localhost"],
+    ["a username", "https://user@api.example.com"],
+    ["a password", "https://:secret@api.example.com"],
+    ["a non-root path", "https://api.example.com/v1"],
+    ["a query", "https://api.example.com?region=cn"],
+    ["a hash", "https://api.example.com#health"],
+    ["a malformed URL", "not a URL"],
+  ])("rejects API base URLs with %s", async (_case, configuredUrl) => {
+    vi.stubEnv("VITE_API_BASE_URL", configuredUrl);
+    const fetchMock = mockFetch(jsonResponse(health));
+
+    await expect(fetchHealth()).rejects.toThrow(
+      "VITE_API_BASE_URL must be a public HTTP(S) origin without credentials, path, query, or hash.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test("propagates network failures without wrapping them", async () => {
     const networkError = new Error("network unavailable");
     globalThis.fetch = vi
