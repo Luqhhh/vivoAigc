@@ -335,6 +335,14 @@ describe("CodeMotion API", () => {
         expect.objectContaining({ id: "fibonacci-recursion" }),
       ]),
     );
+    const actualCategories = response.body.examples.map(
+      (example: { category: string }) => example.category,
+    );
+    expect(new Set(actualCategories)).toEqual(new Set(categories));
+    const exampleIds = response.body.examples.map(
+      (example: { id: string }) => example.id,
+    );
+    expect(new Set(exampleIds).size).toBe(exampleIds.length);
     for (const example of response.body.examples) {
       expect(example).toEqual(
         expect.objectContaining({
