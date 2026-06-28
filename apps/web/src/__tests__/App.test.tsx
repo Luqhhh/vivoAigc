@@ -371,6 +371,117 @@ describe("CodeMotion application", () => {
       .toBeInTheDocument();
   });
 
+  test("invalidates a pending analysis success when code is edited", async () => {
+    let resolveAnalyze!: (response: Response) => void;
+    analyzeHandler = () =>
+      new Promise<Response>((resolve) => {
+        resolveAnalyze = resolve;
+      });
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "分析代码" }));
+    fireEvent.change(screen.getByLabelText("Python 代码"), {
+      target: { value: "print('edited while loading')" },
+    });
+
+    expect(screen.getByRole("button", { name: "分析代码" })).toBeEnabled();
+    await act(async () => resolveAnalyze(jsonResponse(analysis)));
+
+    expect(screen.queryByText(analysis.summary)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("播放控制")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("invalidates a pending analysis error when code is edited", async () => {
+    let rejectAnalyze!: (reason: Error) => void;
+    analyzeHandler = () =>
+      new Promise<Response>((_resolve, reject) => {
+        rejectAnalyze = reject;
+      });
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "分析代码" }));
+    fireEvent.change(screen.getByLabelText("Python 代码"), {
+      target: { value: "print('edited before failure')" },
+    });
+
+    expect(screen.getByRole("button", { name: "分析代码" })).toBeEnabled();
+    await act(async () => rejectAnalyze(new Error("stale analysis failure")));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("播放控制")).not.toBeInTheDocument();
+  });
+
+  test("editing analyzed code clears visualization practice and tutor context", async () => {
+    const { container } = render(<App />);
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "这一步发生了什么？" }));
+    expect(await screen.findByText("当前步骤建立了第一次函数调用。"))
+      .toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("向导师提问"), {
+      target: { value: "尚未发送的问题" },
+    });
+
+    fireEvent.change(screen.getByLabelText("Python 代码"), {
+      target: { value: "print('new context')" },
+    });
+
+    expect(screen.queryByText(analysis.summary)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("播放控制")).not.toBeInTheDocument();
+    expect(container.querySelector(".message")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("向导师提问")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "练习" }));
+    expect(screen.queryByText("为递归添加记忆化")).not.toBeInTheDocument();
+    expect(screen.getByText("先在工作台分析一段代码，再回来查看针对性练习。"))
+      .toBeInTheDocument();
+  });
+
+  test("invalidates a pending tutor success when code is edited", async () => {
+    let resolveTutor!: (response: Response) => void;
+    tutorHandler = () =>
+      new Promise<Response>((resolve) => {
+        resolveTutor = resolve;
+      });
+    const { container } = render(<App />);
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "这一步发生了什么？" }));
+
+    fireEvent.change(screen.getByLabelText("Python 代码"), {
+      target: { value: "print('changed during tutor')" },
+    });
+    await act(async () => resolveTutor(jsonResponse({
+      requestId: analysis.requestId,
+      answer: "这条过期导师回答不应出现。",
+      referencedSteps: [1],
+      suggestedFollowups: [],
+      source: "mock",
+    })));
+
+    expect(container.querySelector(".message")).not.toBeInTheDocument();
+    expect(screen.queryByText("这条过期导师回答不应出现。"))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("invalidates a pending tutor error when code is edited", async () => {
+    let rejectTutor!: (reason: Error) => void;
+    tutorHandler = () =>
+      new Promise<Response>((_resolve, reject) => {
+        rejectTutor = reject;
+      });
+    const { container } = render(<App />);
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "这一步发生了什么？" }));
+
+    fireEvent.change(screen.getByLabelText("Python 代码"), {
+      target: { value: "print('changed before tutor failure')" },
+    });
+    await act(async () => rejectTutor(new Error("stale tutor failure")));
+
+    expect(container.querySelector(".message")).not.toBeInTheDocument();
+    expect(screen.queryByText("导师暂时无法回答，请稍后重试。"))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   test("loads examples and resets prior analysis when an example is selected", async () => {
     render(<App />);
     await analyzeCurrentCode();
@@ -498,6 +609,35 @@ describe("CodeMotion application", () => {
     expect(
       fetchMock.mock.calls.filter(([input]) => input === "/api/analyze-code"),
     ).toHaveLength(0);
+  });
+
+  test("announces service checks example loading and completed analysis politely", async () => {
+    let resolveHealth!: (response: Response) => void;
+    let resolveExamples!: (response: Response) => void;
+    healthHandler = () =>
+      new Promise<Response>((resolve) => {
+        resolveHealth = resolve;
+      });
+    examplesHandler = () =>
+      new Promise<Response>((resolve) => {
+        resolveExamples = resolve;
+      });
+    render(<App />);
+
+    expect(screen.getByRole("status", { name: "服务状态：服务检查中" }))
+      .toHaveAttribute("aria-live", "polite");
+    fireEvent.click(screen.getByRole("button", { name: "示例" }));
+    expect(screen.getByRole("status", { name: "正在载入示例…" }))
+      .toHaveAttribute("aria-live", "polite");
+    await act(async () => {
+      resolveHealth(jsonResponse(health));
+      resolveExamples(jsonResponse({ examples }));
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "工作台" }));
+    await analyzeCurrentCode();
+    expect(screen.getByRole("status", { name: "分析完成：斐波那契递归" }))
+      .toHaveAttribute("aria-live", "polite");
   });
 
   test("provides meaningful empty and offline states", async () => {

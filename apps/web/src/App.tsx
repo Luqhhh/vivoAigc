@@ -102,7 +102,7 @@ function ServiceBadge({ status }: { status: ServiceStatus }) {
     real: "真实服务",
     offline: "服务离线",
   };
-  return <span className={`service-badge status-${status}`}>{labels[status]}</span>;
+  return <span className={`service-badge status-${status}`} role="status" aria-live="polite" aria-label={`服务状态：${labels[status]}`}>{labels[status]}</span>;
 }
 
 interface CodeEditorProps {
@@ -318,7 +318,7 @@ function PageTitle({ eyebrow, title, description }: { eyebrow: string; title: st
 }
 
 function PageState({ icon: Icon, text, spinning = false }: { icon: typeof BookOpen; text: string; spinning?: boolean }) {
-  return <div className="page-state"><Icon className={spinning ? "spin" : ""} aria-hidden="true" /><p>{text}</p></div>;
+  return <div className="page-state" role={spinning ? "status" : undefined} aria-live={spinning ? "polite" : undefined} aria-label={spinning ? text : undefined}><Icon className={spinning ? "spin" : ""} aria-hidden="true" /><p>{text}</p></div>;
 }
 
 function About({ service }: { service: ServiceStatus }) {
@@ -340,7 +340,7 @@ function BottomNavigation({ active, onChange }: { active: ActiveTab; onChange: (
 }
 
 function AnalysisSummary({ analysis }: { analysis: CodeAnalyzeResponse }) {
-  return <section className="analysis-summary"><div><span className={`source source-${analysis.source}`}>{sourceLabels[analysis.source]}</span><h1>{analysis.title}</h1><p>{analysis.summary}</p></div><dl><div><dt>时间</dt><dd>{analysis.complexity.time}</dd></div><div><dt>空间</dt><dd>{analysis.complexity.space}</dd></div></dl>{analysis.warnings.map((warning) => <p className="warning" key={`${warning.code}-${warning.message}`}><AlertTriangle aria-hidden="true" />{warning.message}</p>)}</section>;
+  return <section className="analysis-summary"><span className="visually-hidden" role="status" aria-live="polite" aria-label={`分析完成：${analysis.title}`}>分析完成：{analysis.title}</span><div><span className={`source source-${analysis.source}`}>{sourceLabels[analysis.source]}</span><h1>{analysis.title}</h1><p>{analysis.summary}</p></div><dl><div><dt>时间</dt><dd>{analysis.complexity.time}</dd></div><div><dt>空间</dt><dd>{analysis.complexity.space}</dd></div></dl>{analysis.warnings.map((warning) => <p className="warning" key={`${warning.code}-${warning.message}`}><AlertTriangle aria-hidden="true" />{warning.message}</p>)}</section>;
 }
 
 export default function App() {
@@ -420,14 +420,17 @@ export default function App() {
     }
   }
 
-  function selectExample(example: CodeExample) {
+  function handleCodeChange(nextCode: string) {
     analysisGeneration.current += 1; tutorGeneration.current += 1;
-    setCode(example.code); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setMessages([]); setAnalysisLoading(false); setAnalysisError(undefined); setTutorLoading(false); setTutorError(undefined); setTab("workbench"); setView("timeline");
+    setCode(nextCode); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setView("timeline"); setMessages([]); setAnalysisLoading(false); setAnalysisError(undefined); setTutorLoading(false); setTutorError(undefined); setQuestion("");
+  }
+
+  function selectExample(example: CodeExample) {
+    handleCodeChange(example.code); setTab("workbench");
   }
 
   function resetWorkbench() {
-    analysisGeneration.current += 1; tutorGeneration.current += 1;
-    setCode(DEFAULT_CODE); setAnalysis(undefined); setCurrentStep(0); setPlaying(false); setSpeed(1); setView("timeline"); setMessages([]); setAnalysisLoading(false); setAnalysisError(undefined); setTutorError(undefined); setTutorLoading(false); setQuestion("");
+    handleCodeChange(DEFAULT_CODE); setSpeed(1);
   }
 
   function jumpToStep(step: number) {
@@ -440,7 +443,7 @@ export default function App() {
     <div className={`app-shell${analysis ? " has-playback" : ""}`}>
       <header className="topbar"><div className="brand"><span className="brand-mark"><Code2 aria-hidden="true" /></span><div><strong>CodeMotion</strong><span>Python 执行实验室</span></div></div><div className="topbar-status"><span className="language-tag">Python</span><ServiceBadge status={service} /></div></header>
       <main>
-        {tab === "workbench" && <>{analysis && <AnalysisSummary analysis={analysis} />}<div className="workbench-grid"><CodeEditor code={code} loading={analysisLoading} error={analysisError} onChange={(value) => { setCode(value); setAnalysisError(undefined); }} onAnalyze={runAnalyze} onReset={resetWorkbench} /><Visualizer analysis={analysis} view={view} stepIndex={currentStep} onViewChange={setView} onJump={jumpToStep} /><TutorPanel messages={messages} question={question} loading={tutorLoading} error={tutorError} disabled={!analysis} onQuestionChange={setQuestion} onSend={sendTutor} onStepClick={jumpToStep} /></div></>}
+        {tab === "workbench" && <>{analysis && <AnalysisSummary analysis={analysis} />}<div className="workbench-grid"><CodeEditor code={code} loading={analysisLoading} error={analysisError} onChange={handleCodeChange} onAnalyze={runAnalyze} onReset={resetWorkbench} /><Visualizer analysis={analysis} view={view} stepIndex={currentStep} onViewChange={setView} onJump={jumpToStep} /><TutorPanel messages={messages} question={question} loading={tutorLoading} error={tutorError} disabled={!analysis} onQuestionChange={setQuestion} onSend={sendTutor} onStepClick={jumpToStep} /></div></>}
         {tab === "examples" && <Examples examples={examples} loading={examplesLoading} onSelect={selectExample} />}
         {tab === "practice" && <Practice recommendations={recommendations} onReturn={() => setTab("workbench")} />}
         {tab === "about" && <About service={service} />}
