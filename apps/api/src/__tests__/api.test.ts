@@ -409,12 +409,30 @@ describe("mock tutor provider", () => {
     expect(result.source).toBe("mock");
     expect(result.referencedSteps).toEqual([7]);
     expect(result.suggestedFollowups).toHaveLength(3);
-    expect(result.answer).toContain("当前第 7 步");
-    expect(result.answer).toContain("循环累加每个 number。");
-    expect(result.answer).toContain("当前状态如何变化？");
+    expect(result.answer).toBe("当前第 7 步需要结合已有分析理解。");
     expect(result.answer).not.toContain("fib(");
     expect(result.answer).not.toContain("二分查找");
     expect(result.answer).not.toContain("base case");
+  });
+
+  it("does not echo unreferenced steps from generic tutor inputs", () => {
+    const result = answerWithMockTutor({
+      requestId: "req-generic-unreferenced-steps",
+      code: "value = 1\nprint(value)",
+      currentStep: 7,
+      analysisSummary: "第 3 步完成初始化。",
+      question: "第 5 步是否会返回结果？",
+    });
+
+    expect(() => tutorChatResponseSchema.parse(result)).not.toThrow();
+    expect(result.answer).toBe("当前第 7 步需要结合已有分析理解。");
+    expect(result.answer).not.toMatch(/第 [35] 步/);
+    expect(result.referencedSteps).toEqual([7]);
+    expect(result.suggestedFollowups).toEqual([
+      "这一步执行前后的状态有什么变化？",
+      "当前条件会如何影响下一步？",
+      "可以用更小的输入手动跟踪吗？",
+    ]);
   });
 });
 

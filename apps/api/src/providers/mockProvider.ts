@@ -169,7 +169,7 @@ export function answerWithMockTutor(
       "怎样避免重复计算 fib(2)？",
     ];
   } else {
-    answer = `当前第 ${step} 步需要结合已有分析理解。分析摘要：${request.analysisSummary} 你的问题是“${request.question}”。当前 mock 不补充代码中未提供的行号或变量值。`;
+    answer = `当前第 ${step} 步需要结合已有分析理解。`;
     suggestedFollowups = [
       "这一步执行前后的状态有什么变化？",
       "当前条件会如何影响下一步？",
