@@ -48,6 +48,7 @@ const bracketDatasetCode = `def is_valid(s):
 print(is_valid('([])'))`;
 
 type TraceSnapshot = {
+  step: number;
   event: string;
   variables: Record<string, unknown>;
   changedVariables: string[];
@@ -751,10 +752,18 @@ describe("CodeMotion API", () => {
           expect(response.body.stackFrames.length).toBeGreaterThan(0);
           for (const step of traceSteps) {
             if (step.activeFrameId) {
-              expect(response.body.stackFrames.some(
-                (snapshot: { frames: Array<{ id: string }> }) =>
-                  snapshot.frames.some(({ id }) => id === step.activeFrameId),
+              const snapshot = response.body.stackFrames.find(
+                (item: { step: number }) => item.step === step.step,
+              );
+              expect(snapshot).toBeDefined();
+              expect(snapshot.frames.some(
+                ({ id }: { id: string }) => id === step.activeFrameId,
               )).toBe(true);
+              if (typeof step.variables.visited === "string") {
+                for (const frame of snapshot.frames) {
+                  expect(frame.locals.visited).toBe(step.variables.visited);
+                }
+              }
             }
           }
           break;

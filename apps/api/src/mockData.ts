@@ -1601,20 +1601,21 @@ export const acceptanceDepthFirstSearchAnalysis: CodeAnalyzeResponse = {
   }),
   stackFrames: [
     { step: 1, frames: [{ id: "frame-dfs-0-0", functionName: "dfs", line: 1, params: { row: 0, col: 0 }, locals: { visited: "" }, status: "active" }] },
+    { step: 2, frames: [{ id: "frame-dfs-0-0", functionName: "dfs", line: 6, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "active" }] },
     { step: 3, frames: [
-      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "waiting" },
+      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0),(0,1)" }, status: "waiting" },
       { id: "frame-dfs-0-1", functionName: "dfs", line: 6, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1)" }, status: "active" },
     ] },
     { step: 4, frames: [
-      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "waiting" },
-      { id: "frame-dfs-0-1", functionName: "dfs", line: 8, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1)" }, status: "waiting" },
+      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0),(0,1),(1,1)" }, status: "waiting" },
+      { id: "frame-dfs-0-1", functionName: "dfs", line: 8, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1),(1,1)" }, status: "waiting" },
       { id: "frame-dfs-1-1", functionName: "dfs", line: 6, params: { row: 1, col: 1 }, locals: { visited: "(0,0),(0,1),(1,1)" }, status: "active" },
     ] },
     { step: 5, frames: [
-      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "waiting" },
-      { id: "frame-dfs-0-1", functionName: "dfs", line: 8, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1)" }, status: "waiting" },
-      { id: "frame-dfs-1-1", functionName: "dfs", line: 8, params: { row: 1, col: 1 }, locals: { visited: "(0,0),(0,1),(1,1)" }, status: "waiting" },
-      { id: "frame-dfs-1-2", functionName: "dfs", line: 8, params: { row: 1, col: 2 }, locals: { visited: "(0,0),(0,1),(1,1),(1,2)" }, status: "waiting" },
+      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: DFS_VISITED }, status: "waiting" },
+      { id: "frame-dfs-0-1", functionName: "dfs", line: 8, params: { row: 0, col: 1 }, locals: { visited: DFS_VISITED }, status: "waiting" },
+      { id: "frame-dfs-1-1", functionName: "dfs", line: 8, params: { row: 1, col: 1 }, locals: { visited: DFS_VISITED }, status: "waiting" },
+      { id: "frame-dfs-1-2", functionName: "dfs", line: 8, params: { row: 1, col: 2 }, locals: { visited: DFS_VISITED }, status: "waiting" },
       { id: "frame-dfs-2-2", functionName: "dfs", line: 6, params: { row: 2, col: 2 }, locals: { visited: DFS_VISITED }, status: "active" },
     ] },
     { step: 6, frames: [{ id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: DFS_VISITED }, status: "returned" }] },
