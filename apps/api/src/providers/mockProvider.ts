@@ -1,5 +1,8 @@
 import {
   binarySearchAnalysis,
+  bracketStackAnalysis,
+  climbingStairsAnalysis,
+  depthFirstSearchAnalysis,
   examples,
   fibonacciAnalysis,
 } from "../mockData.js";
@@ -23,6 +26,14 @@ const BASE_CASE_RETURN_VALUE_BY_STEP = new Map<number, number>([
   [18, 0],
 ]);
 
+const ANALYSIS_BY_EXAMPLE_ID = new Map<string, CodeAnalyzeResponse>([
+  ["fibonacci-recursion", fibonacciAnalysis],
+  ["binary-search", binarySearchAnalysis],
+  ["bracket-stack", bracketStackAnalysis],
+  ["depth-first-search", depthFirstSearchAnalysis],
+  ["climbing-stairs", climbingStairsAnalysis],
+]);
+
 function randomHex(): string {
   return Math.floor(Math.random() * 0x1_0000_0000)
     .toString(16)
@@ -36,6 +47,78 @@ function isBinarySearchCode(code: string): boolean {
   );
 }
 
+function normalizeCode(code: string): string {
+  return code.replace(/\r\n/g, "\n").trim();
+}
+
+function analysisForExampleCode(
+  code: string,
+): CodeAnalyzeResponse | undefined {
+  const normalizedCode = normalizeCode(code);
+  const example = examples.find(
+    ({ code: exampleCode }) => normalizeCode(exampleCode) === normalizedCode,
+  );
+
+  return example ? ANALYSIS_BY_EXAMPLE_ID.get(example.id) : undefined;
+}
+
+function createGenericAnalysis(code: string): CodeAnalyzeResponse {
+  const sourceLines = code.replace(/\r\n/g, "\n").split("\n");
+  const lineExplanations: CodeAnalyzeResponse["lineExplanations"] =
+    sourceLines.flatMap((sourceLine, index) =>
+      sourceLine.trim().length === 0
+        ? []
+        : [
+            {
+              line: index + 1,
+              code: sourceLine,
+              explanation:
+                "该行来自本次请求；稳定 mock 仅标记源代码位置，不推断运行状态。",
+              role: "other" as const,
+            },
+          ],
+    );
+  const firstLine = lineExplanations[0]?.line ?? 1;
+  const lastLine = lineExplanations.at(-1)?.line ?? firstLine;
+
+  return {
+    requestId: "mock-generic-base",
+    language: "python",
+    title: "Python 算法片段演示",
+    summary:
+      "未识别到专用示例；以下内容仅按提交的代码行提供静态说明，不推断运行结果或返回值。",
+    detectedConcepts: ["静态代码浏览"],
+    complexity: {
+      time: "未知",
+      space: "未知",
+      explanation: "稳定 mock 未执行这段自定义代码，因此不推断复杂度。",
+    },
+    lineExplanations,
+    traceSteps: [
+      {
+        step: 1,
+        line: firstLine,
+        event: "start",
+        description: "开始静态查看本次请求提交的代码。",
+        variables: { lineCount: sourceLines.length },
+        changedVariables: ["lineCount"],
+      },
+      {
+        step: 2,
+        line: lastLine,
+        event: "end",
+        description: "静态查看结束；未执行代码或推断运行结果。",
+        variables: { lineCount: sourceLines.length },
+        changedVariables: [],
+      },
+    ],
+    stackFrames: [],
+    recommendations: [],
+    warnings: [FALLBACK_WARNING],
+    source: "mock",
+  };
+}
+
 export function withRequestId(
   analysis: CodeAnalyzeResponse,
 ): CodeAnalyzeResponse {
@@ -47,22 +130,13 @@ export function withRequestId(
 export function analyzeWithMock(
   request: CodeAnalyzeRequest,
 ): CodeAnalyzeResponse {
-  const code = request.code.toLowerCase();
+  const exampleAnalysis = analysisForExampleCode(request.code);
 
-  if (isBinarySearchCode(code)) {
-    return withRequestId(binarySearchAnalysis);
+  if (exampleAnalysis) {
+    return withRequestId(exampleAnalysis);
   }
 
-  if (code.includes("fib") || request.visualizationFocus === "recursion") {
-    return withRequestId(fibonacciAnalysis);
-  }
-
-  return withRequestId({
-    ...fibonacciAnalysis,
-    title: "Python 算法片段演示",
-    summary: "当前使用稳定 mock 分析结果演示 CodeMotion 的执行可视化能力。",
-    warnings: [FALLBACK_WARNING],
-  });
+  return withRequestId(createGenericAnalysis(request.code));
 }
 
 export function answerWithMockTutor(
@@ -71,6 +145,7 @@ export function answerWithMockTutor(
   const step = request.currentStep ?? 1;
   const code = request.code.toLowerCase();
   let answer: string;
+  let referencedSteps = [step];
   let suggestedFollowups: string[];
 
   if (isBinarySearchCode(code)) {
@@ -86,6 +161,9 @@ export function answerWithMockTutor(
       baseCaseReturnValue === undefined
         ? `当前步骤不是 base case。真正的 base case 返回发生在第 7、9、12、16、18 步：fib(1) 直接返回 1，fib(0) 直接返回 0，不再创建新调用；这些返回值随后交给等待中的上一层调用相加，使递归逐层回退。`
         : `当前步骤是 base case 返回：fib(${baseCaseReturnValue}) 直接返回 ${baseCaseReturnValue}，不再创建新调用。这个返回值会交给等待中的上一层 fib 调用参与相加，使递归逐层回退。`;
+    if (baseCaseReturnValue === undefined) {
+      referencedSteps = [step, ...BASE_CASE_RETURN_VALUE_BY_STEP.keys()];
+    }
     suggestedFollowups = [
       "fib(0) 为什么返回 0？",
       "返回值产生后调用栈如何变化？",
@@ -103,7 +181,7 @@ export function answerWithMockTutor(
   return {
     requestId: request.requestId,
     answer,
-    referencedSteps: [step],
+    referencedSteps,
     suggestedFollowups,
     source: "mock",
   };

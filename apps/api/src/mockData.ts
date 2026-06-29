@@ -70,28 +70,23 @@ print(is_valid('([])'))`,
     category: "dfs",
     difficulty: "beginner",
     concepts: ["traversal", "visited"],
-    code: `def dfs(graph, start):
-    visited = set()
-    order = []
+    code: `def dfs(grid, row, col, visited):
+    if row < 0 or row >= len(grid) or col < 0 or col >= len(grid[0]):
+        return
+    if grid[row][col] == 0 or (row, col) in visited:
+        return
+    visited.add((row, col))
+    for dr, dc in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+        dfs(grid, row + dr, col + dc, visited)
 
-    def visit(node):
-        if node in visited:
-            return
-        visited.add(node)
-        order.append(node)
-        for neighbor in graph[node]:
-            visit(neighbor)
-
-    visit(start)
-    return order
-
-graph = {
-    'A': ['B', 'C'],
-    'B': ['D'],
-    'C': ['D'],
-    'D': []
-}
-print(dfs(graph, 'A'))`,
+grid = [
+    [1, 1, 0],
+    [0, 1, 1],
+    [0, 0, 1],
+]
+visited = set()
+dfs(grid, 0, 0, visited)
+print(len(visited))`,
     expectedVisualization: ["timeline", "stack", "variables"],
   },
   {
@@ -773,12 +768,7 @@ export const fibonacciAnalysis: CodeAnalyzeResponse = {
       visualizationHint: "跟踪 previous 和 current 的每次变化。",
     },
   ],
-  warnings: [
-    {
-      code: "MOCK_USED",
-      message: "当前展示稳定的斐波那契 mock 分析结果。",
-    },
-  ],
+  warnings: [],
   source: "mock",
 };
 
@@ -1113,11 +1103,416 @@ export const binarySearchAnalysis: CodeAnalyzeResponse = {
       visualizationHint: "每轮高亮保留和排除的区间。",
     },
   ],
-  warnings: [
+  warnings: [],
+  source: "mock",
+};
+
+export const bracketStackAnalysis: CodeAnalyzeResponse = {
+  requestId: "mock-bracket-stack-base",
+  language: "python",
+  title: "括号匹配的栈变化",
+  summary:
+    "is_valid('([])') 使用栈保存左括号，遇到右括号时弹出并核对类型；两组括号都匹配且栈最终为空，因此返回 True。",
+  detectedConcepts: ["栈", "括号匹配", "遍历", "提前返回"],
+  complexity: {
+    time: "O(n)",
+    space: "O(n)",
+    explanation:
+      "每个字符最多入栈和出栈一次；全部为左括号时，栈最多保存 n 个字符。",
+  },
+  lineExplanations: [
     {
-      code: "MOCK_USED",
-      message: "当前展示稳定的二分查找 mock 分析结果。",
+      line: 1,
+      code: "def is_valid(text):",
+      explanation: "定义检查括号文本是否匹配的函数。",
+      role: "input",
+    },
+    {
+      line: 2,
+      code: "    stack = []",
+      explanation: "创建栈来保存尚未匹配的左括号。",
+      role: "state-update",
+    },
+    {
+      line: 3,
+      code: "    pairs = {')': '(', ']': '[', '}': '{'}",
+      explanation: "记录每种右括号对应的左括号。",
+      role: "state-update",
+    },
+    {
+      line: 4,
+      code: "    for char in text:",
+      explanation: "按顺序检查输入中的每个括号。",
+      role: "loop",
+    },
+    {
+      line: 5,
+      code: "        if char in '([{':",
+      explanation: "判断当前字符是否为左括号。",
+      role: "condition",
+    },
+    {
+      line: 6,
+      code: "            stack.append(char)",
+      explanation: "把左括号压入栈，等待后续右括号匹配。",
+      role: "state-update",
+    },
+    {
+      line: 7,
+      code: "        elif not stack or stack.pop() != pairs[char]:",
+      explanation: "右括号到来时弹出栈顶，并检查类型是否一致。",
+      role: "condition",
+    },
+    {
+      line: 8,
+      code: "            return False",
+      explanation: "栈为空或括号类型不一致时立即返回 False。",
+      role: "return",
+    },
+    {
+      line: 9,
+      code: "    return not stack",
+      explanation: "遍历结束后，只有空栈表示全部括号都已匹配。",
+      role: "return",
+    },
+    {
+      line: 11,
+      code: "print(is_valid('([])'))",
+      explanation: "检查示例字符串并打印布尔结果。",
+      role: "output",
     },
   ],
+  traceSteps: [
+    {
+      step: 1,
+      line: 11,
+      event: "start",
+      description: "开始检查文本 '([])'。",
+      variables: { text: "([])", stack: "" },
+      changedVariables: ["text", "stack"],
+    },
+    {
+      step: 2,
+      line: 6,
+      event: "push",
+      description: "读取 '(' 并压入栈。",
+      variables: { char: "(", stack: "(" },
+      changedVariables: ["char", "stack"],
+    },
+    {
+      step: 3,
+      line: 6,
+      event: "push",
+      description: "读取 '[' 并压入栈。",
+      variables: { char: "[", stack: "([" },
+      changedVariables: ["char", "stack"],
+    },
+    {
+      step: 4,
+      line: 7,
+      event: "pop",
+      description: "读取 ']'，弹出 '['，二者匹配。",
+      variables: { char: "]", popped: "[", stack: "(", matched: true },
+      changedVariables: ["char", "popped", "stack", "matched"],
+    },
+    {
+      step: 5,
+      line: 7,
+      event: "pop",
+      description: "读取 ')'，弹出 '('，二者匹配。",
+      variables: { char: ")", popped: "(", stack: "", matched: true },
+      changedVariables: ["char", "popped", "stack"],
+    },
+    {
+      step: 6,
+      line: 9,
+      event: "return",
+      description: "遍历结束且栈为空，返回 True。",
+      variables: { stack: "", returnValue: true },
+      changedVariables: ["returnValue"],
+    },
+  ],
+  stackFrames: [
+    {
+      step: 1,
+      frames: [
+        {
+          id: "frame-is-valid",
+          functionName: "is_valid",
+          line: 1,
+          params: { text: "([])" },
+          locals: { stack: "" },
+          status: "active",
+        },
+      ],
+    },
+    {
+      step: 6,
+      frames: [
+        {
+          id: "frame-is-valid",
+          functionName: "is_valid",
+          line: 9,
+          params: { text: "([])" },
+          locals: { stack: "" },
+          status: "returned",
+          returnValue: true,
+        },
+      ],
+    },
+  ],
+  recommendations: [],
+  warnings: [],
+  source: "mock",
+};
+
+export const depthFirstSearchAnalysis: CodeAnalyzeResponse = {
+  requestId: "mock-depth-first-search-base",
+  language: "python",
+  title: "网格深度优先搜索访问过程",
+  summary:
+    "DFS 从 grid 的 (0, 0) 出发，只递归访问值为 1 且未访问的上下左右单元格；visited 最终包含 5 个连通单元格。",
+  detectedConcepts: ["深度优先搜索", "递归", "visited 集合", "网格遍历"],
+  complexity: {
+    time: "O(rows * cols)",
+    space: "O(rows * cols)",
+    explanation:
+      "每个网格位置最多被有效访问一次；visited 与最深递归路径最多覆盖全部单元格。",
+  },
+  lineExplanations: [
+    {
+      line: 1,
+      code: "def dfs(grid, row, col, visited):",
+      explanation: "定义从指定行列开始遍历网格的递归函数。",
+      role: "input",
+    },
+    {
+      line: 2,
+      code:
+        "    if row < 0 or row >= len(grid) or col < 0 or col >= len(grid[0]):",
+      explanation: "越过网格边界时停止当前递归分支。",
+      role: "condition",
+    },
+    {
+      line: 4,
+      code: "    if grid[row][col] == 0 or (row, col) in visited:",
+      explanation: "跳过值为 0 或已经访问的单元格。",
+      role: "condition",
+    },
+    {
+      line: 6,
+      code: "    visited.add((row, col))",
+      explanation: "把当前可访问单元格加入 visited。",
+      role: "state-update",
+    },
+    {
+      line: 7,
+      code: "    for dr, dc in [(1, 0), (-1, 0), (0, 1), (0, -1)]:",
+      explanation: "枚举下、上、右、左四个相邻方向。",
+      role: "loop",
+    },
+    {
+      line: 8,
+      code: "        dfs(grid, row + dr, col + dc, visited)",
+      explanation: "递归访问当前单元格的相邻位置。",
+      role: "recursive-call",
+    },
+    {
+      line: 10,
+      code: "grid = [",
+      explanation: "定义包含一个五单元格连通区域的示例网格。",
+      role: "state-update",
+    },
+    {
+      line: 15,
+      code: "visited = set()",
+      explanation: "创建集合记录已访问的网格坐标。",
+      role: "state-update",
+    },
+    {
+      line: 16,
+      code: "dfs(grid, 0, 0, visited)",
+      explanation: "从左上角 (0, 0) 启动 DFS。",
+      role: "recursive-call",
+    },
+    {
+      line: 17,
+      code: "print(len(visited))",
+      explanation: "打印从起点可达的非零单元格数量。",
+      role: "output",
+    },
+  ],
+  traceSteps: [
+    {
+      step: 1,
+      line: 16,
+      event: "start",
+      description: "从 grid 的 (0, 0) 启动 DFS。",
+      variables: { row: 0, col: 0, visited: "" },
+      changedVariables: ["row", "col", "visited"],
+    },
+    {
+      step: 2,
+      line: 6,
+      event: "call",
+      description: "访问 (0, 0) 并加入 visited。",
+      variables: { row: 0, col: 0, visited: "(0,0)" },
+      changedVariables: ["visited"],
+    },
+    {
+      step: 3,
+      line: 8,
+      event: "call",
+      description: "从 (0, 0) 向右访问 (0, 1)。",
+      variables: { row: 0, col: 1, visited: "(0,0),(0,1)" },
+      changedVariables: ["col", "visited"],
+    },
+    {
+      step: 4,
+      line: 8,
+      event: "call",
+      description: "从 (0, 1) 向下访问 (1, 1)。",
+      variables: { row: 1, col: 1, visited: "(0,0),(0,1),(1,1)" },
+      changedVariables: ["row", "visited"],
+    },
+    {
+      step: 5,
+      line: 8,
+      event: "call",
+      description: "继续访问 (1, 2)，再向下到达 (2, 2)。",
+      variables: {
+        row: 2,
+        col: 2,
+        visited: "(0,0),(0,1),(1,1),(1,2),(2,2)",
+      },
+      changedVariables: ["row", "col", "visited"],
+    },
+    {
+      step: 6,
+      line: 8,
+      event: "return",
+      description: "所有递归分支结束并回到顶层调用。",
+      variables: { row: 0, col: 0, visited: "5 cells", visitedCount: 5 },
+      changedVariables: ["visitedCount"],
+    },
+    {
+      step: 7,
+      line: 17,
+      event: "output",
+      description: "打印 visited 的大小 5。",
+      variables: { row: 0, col: 0, visited: "5 cells", visitedCount: 5 },
+      changedVariables: [],
+      stdout: "5",
+    },
+  ],
+  stackFrames: [],
+  recommendations: [],
+  warnings: [],
+  source: "mock",
+};
+
+export const climbingStairsAnalysis: CodeAnalyzeResponse = {
+  requestId: "mock-climbing-stairs-base",
+  language: "python",
+  title: "爬楼梯动态规划状态更新",
+  summary:
+    "climb(5) 用 previous 和 current 滚动保存相邻状态，每轮执行 previous, current = current, previous + current，5 轮后 previous 为 8。",
+  detectedConcepts: ["动态规划", "滚动变量", "状态转移", "循环"],
+  complexity: {
+    time: "O(n)",
+    space: "O(1)",
+    explanation: "循环执行 n 次，每次只更新 previous 和 current 两个状态变量。",
+  },
+  lineExplanations: [
+    {
+      line: 1,
+      code: "def climb(n):",
+      explanation: "定义计算 n 阶楼梯走法数量的函数。",
+      role: "input",
+    },
+    {
+      line: 2,
+      code: "    previous, current = 1, 1",
+      explanation: "初始化两个相邻状态，分别表示当前和下一阶的走法数。",
+      role: "state-update",
+    },
+    {
+      line: 3,
+      code: "    for _ in range(n):",
+      explanation: "按楼梯阶数重复进行状态转移。",
+      role: "loop",
+    },
+    {
+      line: 4,
+      code: "        previous, current = current, previous + current",
+      explanation: "当前状态前移，并用前两个状态之和计算下一状态。",
+      role: "state-update",
+    },
+    {
+      line: 5,
+      code: "    return previous",
+      explanation: "循环结束后返回 n 阶楼梯的走法数量。",
+      role: "return",
+    },
+    {
+      line: 7,
+      code: "print(climb(5))",
+      explanation: "计算 5 阶楼梯并打印结果。",
+      role: "output",
+    },
+  ],
+  traceSteps: [
+    {
+      step: 1,
+      line: 7,
+      event: "start",
+      description: "开始计算 climb(5)。",
+      variables: { n: 5 },
+      changedVariables: ["n"],
+    },
+    {
+      step: 2,
+      line: 2,
+      event: "assign",
+      description: "初始化 previous=1、current=1。",
+      variables: { n: 5, previous: 1, current: 1 },
+      changedVariables: ["previous", "current"],
+    },
+    {
+      step: 3,
+      line: 4,
+      event: "loop",
+      description: "第 1 轮后状态更新为 previous=1、current=2。",
+      variables: { iteration: 1, previous: 1, current: 2 },
+      changedVariables: ["iteration", "current"],
+    },
+    {
+      step: 4,
+      line: 4,
+      event: "loop",
+      description: "第 3 轮后状态更新为 previous=3、current=5。",
+      variables: { iteration: 3, previous: 3, current: 5 },
+      changedVariables: ["iteration", "previous", "current"],
+    },
+    {
+      step: 5,
+      line: 4,
+      event: "loop",
+      description: "第 5 轮后状态更新为 previous=8、current=13。",
+      variables: { iteration: 5, previous: 8, current: 13 },
+      changedVariables: ["iteration", "previous", "current"],
+    },
+    {
+      step: 6,
+      line: 5,
+      event: "return",
+      description: "返回 previous 的值 8。",
+      variables: { previous: 8, current: 13, returnValue: 8 },
+      changedVariables: ["returnValue"],
+    },
+  ],
+  stackFrames: [],
+  recommendations: [],
+  warnings: [],
   source: "mock",
 };

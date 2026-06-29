@@ -10,7 +10,7 @@ import {
   codeAnalyzeResponseSchema,
   tutorChatResponseSchema,
 } from "../schemas.js";
-import { fibonacciAnalysis } from "../mockData.js";
+import { examples, fibonacciAnalysis } from "../mockData.js";
 
 const fibonacciCode = `def fib(n):
     if n <= 1:
@@ -18,6 +18,10 @@ const fibonacciCode = `def fib(n):
     return fib(n - 1) + fib(n - 2)
 
 print(fib(4))`;
+
+const binarySearchCode = examples.find(
+  ({ id }) => id === "binary-search",
+)!.code;
 
 describe("mock analysis provider", () => {
   it("returns a schema-valid Fibonacci recursion analysis", () => {
@@ -84,7 +88,7 @@ describe("mock analysis provider", () => {
   it("selects binary, Fibonacci, and generic fallback analyses", () => {
     const binary = analyzeWithMock({
       language: "python",
-      code: "def binary_search(items, target):\n    return -1",
+      code: binarySearchCode,
     });
     const fibonacci = analyzeWithMock({
       language: "python",
@@ -101,14 +105,37 @@ describe("mock analysis provider", () => {
     expect(binary.title).toBe("二分查找区间变化");
     expect(fibonacci.title).toBe("斐波那契递归执行过程");
     expect(fallback.title).toBe("Python 算法片段演示");
-    expect(fallback.summary).toBe(
-      "当前使用稳定 mock 分析结果演示 CodeMotion 的执行可视化能力。",
-    );
+    expect(fallback.summary).not.toContain("fib");
+    expect(fallback.summary).not.toContain("斐波那契");
     expect(fallback.warnings).toEqual([
       {
         code: "MOCK_USED",
         message: "未识别到专用示例，当前返回稳定 mock 演示结果。",
       },
+    ]);
+    expect(fallback.lineExplanations).toEqual([
+      expect.objectContaining({ line: 1, code: "print('hello')" }),
+    ]);
+    expect(fallback.traceSteps).toHaveLength(2);
+    expect(fallback.traceSteps.map(({ event }) => event)).toEqual([
+      "start",
+      "end",
+    ]);
+  });
+
+  it("does not select Fibonacci solely from recursion visualization focus", () => {
+    const result = analyzeWithMock({
+      language: "python",
+      code: "value = 2\nprint(value)",
+      visualizationFocus: "recursion",
+    });
+
+    expect(result.title).toBe("Python 算法片段演示");
+    expect(result.summary).not.toContain("fib");
+    expect(result.summary).not.toContain("斐波那契");
+    expect(result.lineExplanations.map(({ code }) => code)).toEqual([
+      "value = 2",
+      "print(value)",
     ]);
   });
 
@@ -153,7 +180,7 @@ describe("mock analysis provider", () => {
   it("narrows binary-search boundaries and midpoint over time", () => {
     const result = analyzeWithMock({
       language: "python",
-      code: "def binary_search(items, target):\n    return -1",
+      code: binarySearchCode,
     });
     const distinctValueCount = (name: "left" | "right" | "mid") =>
       new Set(
@@ -186,7 +213,7 @@ describe("mock tutor provider", () => {
     expect(result.answer).toContain("当前步骤不是 base case");
     expect(result.answer).toContain("fib(1)");
     expect(result.answer).toContain("fib(0)");
-    expect(result.referencedSteps).toEqual([2]);
+    expect(result.referencedSteps).toEqual([2, 7, 9, 12, 16, 18]);
     expect(result.suggestedFollowups).toHaveLength(3);
     expect(result.source).toBe("mock");
   });
@@ -209,6 +236,25 @@ describe("mock tutor provider", () => {
     expect(result.source).toBe("mock");
   });
 
+  it("covers every explicitly named Fibonacci base-case step", () => {
+    const result = answerWithMockTutor({
+      requestId: "req-base-case-references",
+      code: fibonacciCode,
+      currentStep: 2,
+      analysisSummary: "递归计算 fib(4)。",
+      question: "哪些步骤命中递归出口？",
+    });
+    const namedStepList = result.answer.match(
+      /真正的 base case 返回发生在第 ([\d、]+) 步/,
+    )?.[1];
+    const namedSteps = namedStepList?.split("、").map(Number) ?? [];
+
+    expect(namedSteps).toEqual([7, 9, 12, 16, 18]);
+    expect(result.referencedSteps).toEqual(
+      expect.arrayContaining(namedSteps),
+    );
+  });
+
   it("defaults tutor references to step 1", () => {
     const result = answerWithMockTutor({
       requestId: "req-default-step",
@@ -217,7 +263,7 @@ describe("mock tutor provider", () => {
       question: "从哪里开始？",
     });
 
-    expect(result.referencedSteps).toEqual([1]);
+    expect(result.referencedSteps).toEqual([1, 7, 9, 12, 16, 18]);
   });
 
   it("explains binary-search state without applying Fibonacci step metadata", () => {
@@ -439,6 +485,144 @@ describe("CodeMotion API", () => {
         expect(visualizations).toContain(visualization);
       }
     }
+  });
+
+  it("analyzes every built-in example with algorithm-specific mock data", async () => {
+    const app = createApp({ llmMode: "mock" });
+    const examplesResponse = await request(app).get("/api/examples").expect(200);
+    const expectations = {
+      recursion: {
+        title: "斐波那契",
+        summary: "fib(4)",
+        events: ["call", "return"],
+        variables: ["n", "returnValue"],
+      },
+      "binary-search": {
+        title: "二分查找",
+        summary: "目标值",
+        events: ["condition", "return"],
+        variables: ["left", "right", "mid"],
+      },
+      stack: {
+        title: "括号匹配",
+        summary: "栈",
+        events: ["push", "pop"],
+        variables: ["char", "stack"],
+      },
+      dfs: {
+        title: "深度优先搜索",
+        summary: "grid",
+        events: ["call", "return", "output"],
+        variables: ["row", "col", "visited", "visitedCount"],
+      },
+      dp: {
+        title: "爬楼梯",
+        summary: "previous",
+        events: ["loop", "return"],
+        variables: ["previous", "current"],
+      },
+    } as const;
+    const titles = new Set<string>();
+    const summaries = new Set<string>();
+
+    for (const example of examplesResponse.body.examples) {
+      const response = await request(app)
+        .post("/api/analyze-code")
+        .send({ language: "python", code: example.code })
+        .expect(200);
+      const expected =
+        expectations[example.category as keyof typeof expectations];
+      const sourceLines = example.code.split("\n");
+      const traceEvents = response.body.traceSteps.map(
+        (step: { event: string }) => step.event,
+      );
+      const traceVariableNames = new Set<string>(
+        response.body.traceSteps.flatMap(
+          (step: { variables: Record<string, unknown> }) =>
+            Object.keys(step.variables),
+        ),
+      );
+
+      expect(() => codeAnalyzeResponseSchema.parse(response.body)).not.toThrow();
+      expect(response.body.title).toContain(expected.title);
+      expect(response.body.summary).toContain(expected.summary);
+      expect(response.body.traceSteps.length).toBeGreaterThanOrEqual(2);
+      expect(response.body.warnings).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "MOCK_USED" })]),
+      );
+      for (const explanation of response.body.lineExplanations) {
+        if (explanation.code.trim().length > 0) {
+          expect(explanation.code.trim()).toBe(
+            sourceLines[explanation.line - 1]?.trim(),
+          );
+        }
+      }
+      for (const event of expected.events) {
+        expect(traceEvents).toContain(event);
+      }
+      for (const variable of expected.variables) {
+        expect(traceVariableNames).toContain(variable);
+      }
+
+      titles.add(response.body.title);
+      summaries.add(response.body.summary);
+    }
+
+    expect(titles.size).toBe(5);
+    expect(summaries.size).toBe(5);
+  });
+
+  it("returns conservative source-aligned analysis for unknown custom code", async () => {
+    const code = [
+      "total = 0",
+      "for number in range(3):",
+      "    total += number",
+    ].join("\n");
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .send({ language: "python", code, visualizationFocus: "recursion" })
+      .expect(200);
+
+    expect(() => codeAnalyzeResponseSchema.parse(response.body)).not.toThrow();
+    expect(response.body.title).toBe("Python 算法片段演示");
+    expect(response.body.summary).not.toMatch(/fib|斐波那契/i);
+    expect(response.body.lineExplanations.map(
+      ({ code: explainedCode }: { code: string }) => explainedCode,
+    )).toEqual(code.split("\n"));
+    expect(response.body.traceSteps.map(
+      ({ event }: { event: string }) => event,
+    )).toEqual(["start", "end"]);
+    expect(JSON.stringify(response.body.traceSteps)).not.toMatch(
+      /fib|斐波那契|returnValue|stdout/i,
+    );
+    expect(response.body.warnings).toEqual([
+      {
+        code: "MOCK_USED",
+        message: "未识别到专用示例，当前返回稳定 mock 演示结果。",
+      },
+    ]);
+  });
+
+  it.each([
+    "def fib(n):\n    return 42",
+    "def binary_search(items, target):\n    return -1",
+  ])("keeps custom code with familiar names on generic analysis", (code) => {
+    const result = analyzeWithMock({
+      language: "python",
+      code,
+      visualizationFocus: "recursion",
+    });
+
+    expect(result.title).toBe("Python 算法片段演示");
+    expect(result.lineExplanations.map(({ code: sourceLine }) => sourceLine))
+      .toEqual(code.split("\n"));
+    expect(result.traceSteps.map(({ event }) => event)).toEqual([
+      "start",
+      "end",
+    ]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "MOCK_USED" }),
+    ]);
   });
 
   it("rejects an empty analysis request as recoverable invalid input", async () => {
