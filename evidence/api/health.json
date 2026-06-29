@@ -1,0 +1,6 @@
+﻿{
+    "ok":  true,
+    "service":  "codemotion-api",
+    "llmMode":  "mock",
+    "version":  "1.0.0"
+}

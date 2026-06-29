@@ -1,0 +1,13 @@
+﻿{
+    "requestId":  "req-1782662471676-47e2bda5",
+    "answer":  "当前步骤不是 base case。真正的 base case 返回发生在第 7、9、12、16、18 步：fib(1) 直接返回 1，fib(0) 直接返回 0，不再创建新调用；这些返回值随后交给等待中的上一层调用相加，使递归逐层回退。",
+    "referencedSteps":  [
+                            1
+                        ],
+    "suggestedFollowups":  [
+                               "fib(0) 为什么返回 0？",
+                               "返回值产生后调用栈如何变化？",
+                               "怎样避免重复计算 fib(2)？"
+                           ],
+    "source":  "mock"
+}

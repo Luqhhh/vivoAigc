@@ -1,0 +1,84 @@
+﻿{
+    "examples":  [
+                     {
+                         "id":  "fibonacci-recursion",
+                         "title":  "斐波那契递归",
+                         "category":  "recursion",
+                         "difficulty":  "beginner",
+                         "concepts":  [
+                                          "recursion",
+                                          "base-case"
+                                      ],
+                         "code":  "def fib(n):\n    if n \u003c= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(4))",
+                         "expectedVisualization":  [
+                                                       "timeline",
+                                                       "stack",
+                                                       "recursion-tree",
+                                                       "variables"
+                                                   ]
+                     },
+                     {
+                         "id":  "binary-search",
+                         "title":  "二分查找",
+                         "category":  "binary-search",
+                         "difficulty":  "beginner",
+                         "concepts":  [
+                                          "binary-search",
+                                          "boundary"
+                                      ],
+                         "code":  "def binary_search(items, target):\n    left, right = 0, len(items) - 1\n    while left \u003c= right:\n        mid = (left + right) // 2\n        if items[mid] == target:\n            return mid\n        if items[mid] \u003c target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1\n\nprint(binary_search([1, 3, 5, 7, 9, 11], 7))",
+                         "expectedVisualization":  [
+                                                       "timeline",
+                                                       "stack",
+                                                       "variables"
+                                                   ]
+                     },
+                     {
+                         "id":  "bracket-stack",
+                         "title":  "括号匹配",
+                         "category":  "stack",
+                         "difficulty":  "beginner",
+                         "concepts":  [
+                                          "stack",
+                                          "matching"
+                                      ],
+                         "code":  "def is_valid(text):\n    stack = []\n    pairs = {\u0027)\u0027: \u0027(\u0027, \u0027]\u0027: \u0027[\u0027, \u0027}\u0027: \u0027{\u0027}\n    for char in text:\n        if char in \u0027([{\u0027:\n            stack.append(char)\n        elif not stack or stack.pop() != pairs[char]:\n            return False\n    return not stack\n\nprint(is_valid(\u0027([])\u0027))",
+                         "expectedVisualization":  [
+                                                       "timeline",
+                                                       "stack",
+                                                       "variables"
+                                                   ]
+                     },
+                     {
+                         "id":  "depth-first-search",
+                         "title":  "深度优先搜索",
+                         "category":  "dfs",
+                         "difficulty":  "beginner",
+                         "concepts":  [
+                                          "traversal",
+                                          "visited"
+                                      ],
+                         "code":  "def dfs(graph, start):\n    visited = set()\n    order = []\n\n    def visit(node):\n        if node in visited:\n            return\n        visited.add(node)\n        order.append(node)\n        for neighbor in graph[node]:\n            visit(neighbor)\n\n    visit(start)\n    return order\n\ngraph = {\n    \u0027A\u0027: [\u0027B\u0027, \u0027C\u0027],\n    \u0027B\u0027: [\u0027D\u0027],\n    \u0027C\u0027: [\u0027D\u0027],\n    \u0027D\u0027: []\n}\nprint(dfs(graph, \u0027A\u0027))",
+                         "expectedVisualization":  [
+                                                       "timeline",
+                                                       "stack",
+                                                       "variables"
+                                                   ]
+                     },
+                     {
+                         "id":  "climbing-stairs",
+                         "title":  "爬楼梯",
+                         "category":  "dp",
+                         "difficulty":  "intermediate",
+                         "concepts":  [
+                                          "dp",
+                                          "state-transition"
+                                      ],
+                         "code":  "def climb(n):\n    previous, current = 1, 1\n    for _ in range(n):\n        previous, current = current, previous + current\n    return previous\n\nprint(climb(5))",
+                         "expectedVisualization":  [
+                                                       "timeline",
+                                                       "variables"
+                                                   ]
+                     }
+                 ]
+}

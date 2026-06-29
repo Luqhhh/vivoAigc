@@ -1,0 +1,28 @@
+{
+  "executedAt": "2026-06-28T23:36:00+08:00",
+  "browser": "Microsoft Edge via Playwright",
+  "mobile": {
+    "viewport": "360x800",
+    "horizontalOverflow": false,
+    "playbackPresentBeforeAnalysis": false,
+    "undersizedInteractiveTargets": 0,
+    "playbackBottom": 732,
+    "navigationTop": 732,
+    "consoleErrors": 0
+  },
+  "desktop": {
+    "viewport": "1440x1000",
+    "horizontalOverflow": false,
+    "playbackPresentBeforeAnalysis": false,
+    "undersizedInteractiveTargets": 0,
+    "playbackBottom": 932,
+    "navigationTop": 932,
+    "consoleErrors": 0
+  },
+  "screenshots": [
+    "evidence/screenshots/mobile/workbench-360.png",
+    "evidence/screenshots/mobile/analysis-360.png",
+    "evidence/screenshots/mobile/examples-360.png",
+    "evidence/screenshots/desktop/analysis-1440.png"
+  ]
+}
