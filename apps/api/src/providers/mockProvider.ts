@@ -1,8 +1,8 @@
 import {
-  binarySearchAnalysis,
-  bracketStackAnalysis,
-  climbingStairsAnalysis,
-  depthFirstSearchAnalysis,
+  acceptanceBinarySearchAnalysis,
+  acceptanceBracketStackAnalysis,
+  acceptanceClimbingStairsAnalysis,
+  acceptanceDepthFirstSearchAnalysis,
   examples,
   fibonacciAnalysis,
 } from "../mockData.js";
@@ -28,10 +28,10 @@ const BASE_CASE_RETURN_VALUE_BY_STEP = new Map<number, number>([
 
 const ANALYSIS_BY_EXAMPLE_ID = new Map<string, CodeAnalyzeResponse>([
   ["fibonacci-recursion", fibonacciAnalysis],
-  ["binary-search", binarySearchAnalysis],
-  ["bracket-stack", bracketStackAnalysis],
-  ["depth-first-search", depthFirstSearchAnalysis],
-  ["climbing-stairs", climbingStairsAnalysis],
+  ["binary-search", acceptanceBinarySearchAnalysis],
+  ["bracket-stack", acceptanceBracketStackAnalysis],
+  ["depth-first-search", acceptanceDepthFirstSearchAnalysis],
+  ["climbing-stairs", acceptanceClimbingStairsAnalysis],
 ]);
 
 function randomHex(): string {
@@ -57,8 +57,17 @@ function analysisForExampleCode(
   code: string,
 ): CodeAnalyzeResponse | undefined {
   const example = exampleForCode(code);
+  const analysis = example ? ANALYSIS_BY_EXAMPLE_ID.get(example.id) : undefined;
+  if (!analysis) return undefined;
 
-  return example ? ANALYSIS_BY_EXAMPLE_ID.get(example.id) : undefined;
+  const sourceLines = normalizeNewlines(code).split("\n");
+  return {
+    ...analysis,
+    lineExplanations: analysis.lineExplanations.map((item) => ({
+      ...item,
+      code: sourceLines[item.line - 1] ?? item.code,
+    })),
+  };
 }
 
 function createGenericAnalysis(code: string): CodeAnalyzeResponse {
@@ -141,8 +150,11 @@ export function analyzeWithMock(
 export function answerWithMockTutor(
   request: TutorChatRequest,
 ): TutorChatResponse {
-  const step = request.currentStep ?? 1;
-  const exampleId = exampleForCode(request.code)?.id;
+  const example = exampleForCode(request.code);
+  const analysis = example ? ANALYSIS_BY_EXAMPLE_ID.get(example.id) : undefined;
+  const maxStep = analysis?.traceSteps.at(-1)?.step ?? 2;
+  const step = Math.min(request.currentStep ?? 1, maxStep);
+  const exampleId = example?.id;
   let answer: string;
   let referencedSteps = [step];
   let suggestedFollowups: string[];

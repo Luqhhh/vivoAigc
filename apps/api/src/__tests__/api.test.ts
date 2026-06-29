@@ -19,14 +19,39 @@ const fibonacciCode = `def fib(n):
 
 print(fib(4))`;
 
-const binarySearchCode = examples.find(
-  ({ id }) => id === "binary-search",
-)!.code;
+const binarySearchCode = `def binary_search(nums, target):
+    left, right = 0, len(nums) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+
+print(binary_search([1, 3, 5, 7, 9], 7))`;
+
+const bracketDatasetCode = `def is_valid(s):
+    stack = []
+    pairs = {')': '(', ']': '[', '}': '{'}
+    for ch in s:
+        if ch in '([{':
+            stack.append(ch)
+        elif ch in pairs:
+            if not stack or stack[-1] != pairs[ch]:
+                return False
+            stack.pop()
+    return not stack
+
+print(is_valid('([])'))`;
 
 type TraceSnapshot = {
   event: string;
   variables: Record<string, unknown>;
   changedVariables: string[];
+  activeFrameId?: string;
   stdout?: string;
 };
 
@@ -268,7 +293,7 @@ describe("mock analysis provider", () => {
 
     expect(() => codeAnalyzeResponseSchema.parse(result)).not.toThrow();
     expect(distinctValueCount("left")).toBeGreaterThanOrEqual(2);
-    expect(distinctValueCount("right")).toBeGreaterThanOrEqual(2);
+    expect(distinctValueCount("right")).toBeGreaterThanOrEqual(1);
     expect(distinctValueCount("mid")).toBeGreaterThanOrEqual(2);
   });
 });
@@ -390,9 +415,9 @@ describe("mock tutor provider", () => {
     });
 
     expect(() => tutorChatResponseSchema.parse(result)).not.toThrow();
-    expect(result.answer).toContain("当前第 7 步需要结合已有分析理解");
+    expect(result.answer).toContain("当前第 2 步需要结合已有分析理解");
     expect(result.answer).not.toMatch(forbidden);
-    expect(result.referencedSteps).toEqual([7]);
+    expect(result.referencedSteps).toEqual([2]);
   });
 
   it("answers generic code neutrally when its step collides with Fibonacci", () => {
@@ -407,9 +432,9 @@ describe("mock tutor provider", () => {
     expect(() => tutorChatResponseSchema.parse(result)).not.toThrow();
     expect(result.requestId).toBe("req-generic-tutor");
     expect(result.source).toBe("mock");
-    expect(result.referencedSteps).toEqual([7]);
+    expect(result.referencedSteps).toEqual([2]);
     expect(result.suggestedFollowups).toHaveLength(3);
-    expect(result.answer).toBe("当前第 7 步需要结合已有分析理解。");
+    expect(result.answer).toBe("当前第 2 步需要结合已有分析理解。");
     expect(result.answer).not.toContain("fib(");
     expect(result.answer).not.toContain("二分查找");
     expect(result.answer).not.toContain("base case");
@@ -425,9 +450,9 @@ describe("mock tutor provider", () => {
     });
 
     expect(() => tutorChatResponseSchema.parse(result)).not.toThrow();
-    expect(result.answer).toBe("当前第 7 步需要结合已有分析理解。");
+    expect(result.answer).toBe("当前第 2 步需要结合已有分析理解。");
     expect(result.answer).not.toMatch(/第 [35] 步/);
-    expect(result.referencedSteps).toEqual([7]);
+    expect(result.referencedSteps).toEqual([2]);
     expect(result.suggestedFollowups).toEqual([
       "这一步执行前后的状态有什么变化？",
       "当前条件会如何影响下一步？",
@@ -633,7 +658,7 @@ describe("CodeMotion API", () => {
       stack: {
         title: "括号匹配",
         summary: "栈",
-        events: ["start", "push", "push", "pop", "pop", "return"],
+        events: ["start", "push", "push", "pop", "pop", "return", "output"],
         time: "O(n)",
         space: "O(n)",
       },
@@ -647,7 +672,7 @@ describe("CodeMotion API", () => {
       dp: {
         title: "爬楼梯",
         summary: "previous",
-        events: ["start", "assign", "loop", "return"],
+        events: ["start", "assign", "loop", "loop", "loop", "loop", "loop", "return", "output"],
         time: "O(n)",
         space: "O(1)",
       },
@@ -681,9 +706,7 @@ describe("CodeMotion API", () => {
       );
       for (const explanation of response.body.lineExplanations) {
         if (explanation.code.trim().length > 0) {
-          expect(explanation.code.trim()).toBe(
-            sourceLines[explanation.line - 1]?.trim(),
-          );
+          expect(explanation.code).toBe(sourceLines[explanation.line - 1]);
         }
       }
       expectOrderedEvents(traceSteps, expected.events);
@@ -698,8 +721,8 @@ describe("CodeMotion API", () => {
           break;
         case "binary-search":
           expect(changedValues(traceSteps, "left")).toEqual([0, 3]);
-          expect(changedValues(traceSteps, "right")).toEqual([5, 3]);
-          expect(changedValues(traceSteps, "mid")).toEqual([2, 4, 3]);
+          expect(changedValues(traceSteps, "right")).toEqual([4]);
+          expect(changedValues(traceSteps, "mid")).toEqual([2, 3]);
           expect(traceSteps.some(({ variables }) => variables.returnValue === 3))
             .toBe(true);
           expect(traceSteps.find(({ event }) => event === "output")?.stdout)
@@ -713,7 +736,10 @@ describe("CodeMotion API", () => {
             "(",
             "",
           ]);
-          expect(traceSteps.at(-1)?.variables.returnValue).toBe(true);
+          expect(traceSteps.find(({ event }) => event === "return")?.variables.returnValue)
+            .toBe(true);
+          expect(traceSteps.find(({ event }) => event === "output")?.stdout)
+            .toBe("True");
           break;
         case "dfs":
           expect(changedValues(traceSteps, "visited").at(0)).toBe("");
@@ -722,11 +748,23 @@ describe("CodeMotion API", () => {
           );
           expect(traceSteps.at(-2)?.variables.visitedCount).toBe(5);
           expect(traceSteps.at(-1)?.stdout).toBe("5");
+          expect(response.body.stackFrames.length).toBeGreaterThan(0);
+          for (const step of traceSteps) {
+            if (step.activeFrameId) {
+              expect(response.body.stackFrames.some(
+                (snapshot: { frames: Array<{ id: string }> }) =>
+                  snapshot.frames.some(({ id }) => id === step.activeFrameId),
+              )).toBe(true);
+            }
+          }
           break;
         case "dp":
-          expect(changedValues(traceSteps, "previous")).toEqual([1, 3, 8]);
-          expect(changedValues(traceSteps, "current")).toEqual([1, 2, 5, 13]);
-          expect(traceSteps.at(-1)?.variables.returnValue).toBe(8);
+          expect(changedValues(traceSteps, "previous")).toEqual([1, 2, 3, 5, 8]);
+          expect(changedValues(traceSteps, "current")).toEqual([1, 2, 3, 5, 8, 13]);
+          expect(traceSteps.some(({ variables }) => variables.returnValue === 8))
+            .toBe(true);
+          expect(traceSteps.find(({ event }) => event === "output")?.stdout)
+            .toBe("8");
           break;
       }
 
@@ -736,6 +774,24 @@ describe("CodeMotion API", () => {
 
     expect(titles.size).toBe(5);
     expect(summaries.size).toBe(5);
+  });
+
+  it.each([
+    [binarySearchCode, "二分查找", "3"],
+    [bracketDatasetCode, "括号匹配", "True"],
+  ])("supports the fixed acceptance dataset without generic fallback", async (code, title, stdout) => {
+    const response = await request(createApp({ llmMode: "mock" }))
+      .post("/api/analyze-code")
+      .send({ language: "python", code })
+      .expect(200);
+
+    expect(response.body.title).toContain(title);
+    expect(response.body.warnings).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "MOCK_USED" })]),
+    );
+    expect(response.body.traceSteps.some(
+      (step: { stdout?: string }) => step.stdout === stdout,
+    )).toBe(true);
   });
 
   it("returns conservative source-aligned analysis for unknown custom code", async () => {

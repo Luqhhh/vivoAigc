@@ -7,19 +7,19 @@ export const fibonacciCode = `def fib(n):
 
 print(fib(4))`;
 
-const binarySearchCode = `def binary_search(items, target):
-    left, right = 0, len(items) - 1
+const binarySearchCode = `def binary_search(nums, target):
+    left, right = 0, len(nums) - 1
     while left <= right:
         mid = (left + right) // 2
-        if items[mid] == target:
+        if nums[mid] == target:
             return mid
-        if items[mid] < target:
+        elif nums[mid] < target:
             left = mid + 1
         else:
             right = mid - 1
     return -1
 
-print(binary_search([1, 3, 5, 7, 9, 11], 7))`;
+print(binary_search([1, 3, 5, 7, 9], 7))`;
 
 export const examples: CodeExample[] = [
   {
@@ -51,14 +51,16 @@ export const examples: CodeExample[] = [
     category: "stack",
     difficulty: "beginner",
     concepts: ["stack", "matching"],
-    code: `def is_valid(text):
+    code: `def is_valid(s):
     stack = []
     pairs = {')': '(', ']': '[', '}': '{'}
-    for char in text:
-        if char in '([{':
-            stack.append(char)
-        elif not stack or stack.pop() != pairs[char]:
-            return False
+    for ch in s:
+        if ch in '([{':
+            stack.append(ch)
+        elif ch in pairs:
+            if not stack or stack[-1] != pairs[ch]:
+                return False
+            stack.pop()
     return not stack
 
 print(is_valid('([])'))`,
@@ -1515,4 +1517,122 @@ export const climbingStairsAnalysis: CodeAnalyzeResponse = {
   recommendations: [],
   warnings: [],
   source: "mock",
+};
+
+export const acceptanceBinarySearchAnalysis: CodeAnalyzeResponse = {
+  ...binarySearchAnalysis,
+  summary:
+    "在 [1, 3, 5, 7, 9] 中查找目标值 7：先检查索引 2，再把 left 收缩到 3，最终返回索引 3。",
+  traceSteps: [
+    { step: 1, line: 13, event: "start", description: "开始在 5 个有序元素中查找 7。", variables: { target: 7, itemCount: 5 }, changedVariables: ["target", "itemCount"], activeFrameId: "frame-binary-search" },
+    { step: 2, line: 2, event: "assign", description: "初始化 left=0、right=4。", variables: { left: 0, right: 4, target: 7 }, changedVariables: ["left", "right"], activeFrameId: "frame-binary-search" },
+    { step: 3, line: 3, event: "loop", description: "0 <= 4，搜索区间有效。", variables: { left: 0, right: 4 }, changedVariables: [], activeFrameId: "frame-binary-search" },
+    { step: 4, line: 4, event: "assign", description: "计算 mid=2，中点值为 5。", variables: { left: 0, right: 4, mid: 2, midValue: 5 }, changedVariables: ["mid", "midValue"], activeFrameId: "frame-binary-search" },
+    { step: 5, line: 5, event: "condition", description: "5 不等于目标 7。", variables: { left: 0, right: 4, mid: 2, isMatch: false }, changedVariables: ["isMatch"], activeFrameId: "frame-binary-search" },
+    { step: 6, line: 7, event: "condition", description: "5 < 7，保留右半区间。", variables: { left: 0, right: 4, mid: 2, searchRight: true }, changedVariables: ["searchRight"], activeFrameId: "frame-binary-search" },
+    { step: 7, line: 8, event: "assign", description: "把 left 更新为 3。", variables: { left: 3, right: 4, mid: 2 }, changedVariables: ["left"], activeFrameId: "frame-binary-search" },
+    { step: 8, line: 3, event: "loop", description: "3 <= 4，继续搜索。", variables: { left: 3, right: 4, mid: 2 }, changedVariables: [], activeFrameId: "frame-binary-search" },
+    { step: 9, line: 4, event: "assign", description: "计算 mid=3，中点值为 7。", variables: { left: 3, right: 4, mid: 3, midValue: 7 }, changedVariables: ["mid", "midValue"], activeFrameId: "frame-binary-search" },
+    { step: 10, line: 5, event: "condition", description: "中点值 7 等于目标值。", variables: { left: 3, right: 4, mid: 3, isMatch: true }, changedVariables: ["isMatch"], activeFrameId: "frame-binary-search" },
+    { step: 11, line: 6, event: "return", description: "返回索引 3。", variables: { left: 3, right: 4, mid: 3, returnValue: 3 }, changedVariables: ["returnValue"], activeFrameId: "frame-binary-search" },
+    { step: 12, line: 13, event: "output", description: "print 输出索引 3。", variables: { result: 3 }, changedVariables: ["result"], stdout: "3" },
+    { step: 13, line: 13, event: "end", description: "程序执行结束。", variables: { result: 3 }, changedVariables: [], stdout: "3" },
+  ],
+  stackFrames: [
+    { step: 1, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 1, params: { target: 7, itemCount: 5 }, locals: {}, status: "active" }] },
+    { step: 4, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 4, params: { target: 7, itemCount: 5 }, locals: { left: 0, right: 4, mid: 2, midValue: 5 }, status: "active" }] },
+    { step: 9, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 4, params: { target: 7, itemCount: 5 }, locals: { left: 3, right: 4, mid: 3, midValue: 7 }, status: "active" }] },
+    { step: 11, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 6, params: { target: 7, itemCount: 5 }, locals: { left: 3, right: 4, mid: 3, midValue: 7 }, status: "returned", returnValue: 3 }] },
+  ],
+};
+
+export const acceptanceBracketStackAnalysis: CodeAnalyzeResponse = {
+  ...bracketStackAnalysis,
+  lineExplanations: [
+    { line: 1, code: "", explanation: "定义检查括号字符串是否合法的函数。", role: "input" },
+    { line: 2, code: "", explanation: "创建栈保存尚未匹配的左括号。", role: "state-update" },
+    { line: 3, code: "", explanation: "记录右括号到左括号的对应关系。", role: "state-update" },
+    { line: 4, code: "", explanation: "逐个读取字符串中的括号。", role: "loop" },
+    { line: 5, code: "", explanation: "左括号需要压入栈。", role: "condition" },
+    { line: 6, code: "", explanation: "把当前左括号压入栈。", role: "state-update" },
+    { line: 7, code: "", explanation: "右括号需要与栈顶配对。", role: "condition" },
+    { line: 8, code: "", explanation: "栈为空或栈顶类型不匹配时失败。", role: "condition" },
+    { line: 9, code: "", explanation: "发现不匹配时立即返回 False。", role: "return" },
+    { line: 10, code: "", explanation: "匹配成功后弹出栈顶左括号。", role: "state-update" },
+    { line: 11, code: "", explanation: "遍历结束时空栈表示全部匹配。", role: "return" },
+    { line: 13, code: "", explanation: "检查 '([])' 并打印结果。", role: "output" },
+  ],
+  traceSteps: [
+    { step: 1, line: 13, event: "start", description: "开始检查文本 '([])'。", variables: { s: "([])" }, changedVariables: ["s"], activeFrameId: "frame-is-valid" },
+    { step: 2, line: 2, event: "assign", description: "初始化空栈。", variables: { ch: "", stack: "" }, changedVariables: ["stack"], activeFrameId: "frame-is-valid" },
+    { step: 3, line: 6, event: "push", description: "读取 '(' 并压栈。", variables: { ch: "(", stack: "(" }, changedVariables: ["ch", "stack"], activeFrameId: "frame-is-valid" },
+    { step: 4, line: 6, event: "push", description: "读取 '[' 并压栈。", variables: { ch: "[", stack: "([" }, changedVariables: ["ch", "stack"], activeFrameId: "frame-is-valid" },
+    { step: 5, line: 8, event: "condition", description: "']' 与栈顶 '[' 匹配。", variables: { ch: "]", stack: "([", matched: true }, changedVariables: ["ch", "matched"], activeFrameId: "frame-is-valid" },
+    { step: 6, line: 10, event: "pop", description: "弹出 '['。", variables: { ch: "]", popped: "[", stack: "(" }, changedVariables: ["popped", "stack"], activeFrameId: "frame-is-valid" },
+    { step: 7, line: 8, event: "condition", description: "')' 与栈顶 '(' 匹配。", variables: { ch: ")", stack: "(", matched: true }, changedVariables: ["ch"], activeFrameId: "frame-is-valid" },
+    { step: 8, line: 10, event: "pop", description: "弹出 '('。", variables: { ch: ")", popped: "(", stack: "" }, changedVariables: ["popped", "stack"], activeFrameId: "frame-is-valid" },
+    { step: 9, line: 11, event: "return", description: "栈为空，返回 True。", variables: { stack: "", returnValue: true }, changedVariables: ["returnValue"], activeFrameId: "frame-is-valid" },
+    { step: 10, line: 13, event: "output", description: "print 输出 True。", variables: { result: true }, changedVariables: ["result"], stdout: "True" },
+    { step: 11, line: 13, event: "end", description: "程序执行结束。", variables: { result: true }, changedVariables: [], stdout: "True" },
+  ],
+  stackFrames: [
+    { step: 1, frames: [{ id: "frame-is-valid", functionName: "is_valid", line: 1, params: { s: "([])" }, locals: { stack: "" }, status: "active" }] },
+    { step: 9, frames: [{ id: "frame-is-valid", functionName: "is_valid", line: 11, params: { s: "([])" }, locals: { stack: "" }, status: "returned", returnValue: true }] },
+  ],
+};
+
+const DFS_VISITED = "(0,0),(0,1),(1,1),(1,2),(2,2)";
+
+export const acceptanceDepthFirstSearchAnalysis: CodeAnalyzeResponse = {
+  ...depthFirstSearchAnalysis,
+  traceSteps: depthFirstSearchAnalysis.traceSteps.map((step) => {
+    const activeFrameIds: Record<number, string> = {
+      1: "frame-dfs-0-0",
+      2: "frame-dfs-0-0",
+      3: "frame-dfs-0-1",
+      4: "frame-dfs-1-1",
+      5: "frame-dfs-2-2",
+      6: "frame-dfs-0-0",
+    };
+    if (step.step === 6) {
+      return { ...step, variables: { row: 0, col: 0, visited: DFS_VISITED, visitedCount: 5 }, changedVariables: ["visitedCount"], activeFrameId: activeFrameIds[step.step] };
+    }
+    return { ...step, activeFrameId: activeFrameIds[step.step] };
+  }),
+  stackFrames: [
+    { step: 1, frames: [{ id: "frame-dfs-0-0", functionName: "dfs", line: 1, params: { row: 0, col: 0 }, locals: { visited: "" }, status: "active" }] },
+    { step: 3, frames: [
+      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "waiting" },
+      { id: "frame-dfs-0-1", functionName: "dfs", line: 6, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1)" }, status: "active" },
+    ] },
+    { step: 4, frames: [
+      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "waiting" },
+      { id: "frame-dfs-0-1", functionName: "dfs", line: 8, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1)" }, status: "waiting" },
+      { id: "frame-dfs-1-1", functionName: "dfs", line: 6, params: { row: 1, col: 1 }, locals: { visited: "(0,0),(0,1),(1,1)" }, status: "active" },
+    ] },
+    { step: 5, frames: [
+      { id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: "(0,0)" }, status: "waiting" },
+      { id: "frame-dfs-0-1", functionName: "dfs", line: 8, params: { row: 0, col: 1 }, locals: { visited: "(0,0),(0,1)" }, status: "waiting" },
+      { id: "frame-dfs-1-1", functionName: "dfs", line: 8, params: { row: 1, col: 1 }, locals: { visited: "(0,0),(0,1),(1,1)" }, status: "waiting" },
+      { id: "frame-dfs-1-2", functionName: "dfs", line: 8, params: { row: 1, col: 2 }, locals: { visited: "(0,0),(0,1),(1,1),(1,2)" }, status: "waiting" },
+      { id: "frame-dfs-2-2", functionName: "dfs", line: 6, params: { row: 2, col: 2 }, locals: { visited: DFS_VISITED }, status: "active" },
+    ] },
+    { step: 6, frames: [{ id: "frame-dfs-0-0", functionName: "dfs", line: 8, params: { row: 0, col: 0 }, locals: { visited: DFS_VISITED }, status: "returned" }] },
+  ],
+};
+
+export const acceptanceClimbingStairsAnalysis: CodeAnalyzeResponse = {
+  ...climbingStairsAnalysis,
+  traceSteps: [
+    { step: 1, line: 7, event: "start", description: "开始计算 climb(5)。", variables: { n: 5 }, changedVariables: ["n"] },
+    { step: 2, line: 2, event: "assign", description: "初始化 previous=1、current=1。", variables: { n: 5, previous: 1, current: 1 }, changedVariables: ["previous", "current"] },
+    { step: 3, line: 4, event: "loop", description: "第 1 轮：previous=1、current=2。", variables: { iteration: 1, previous: 1, current: 2 }, changedVariables: ["iteration", "current"] },
+    { step: 4, line: 4, event: "loop", description: "第 2 轮：previous=2、current=3。", variables: { iteration: 2, previous: 2, current: 3 }, changedVariables: ["iteration", "previous", "current"] },
+    { step: 5, line: 4, event: "loop", description: "第 3 轮：previous=3、current=5。", variables: { iteration: 3, previous: 3, current: 5 }, changedVariables: ["iteration", "previous", "current"] },
+    { step: 6, line: 4, event: "loop", description: "第 4 轮：previous=5、current=8。", variables: { iteration: 4, previous: 5, current: 8 }, changedVariables: ["iteration", "previous", "current"] },
+    { step: 7, line: 4, event: "loop", description: "第 5 轮：previous=8、current=13。", variables: { iteration: 5, previous: 8, current: 13 }, changedVariables: ["iteration", "previous", "current"] },
+    { step: 8, line: 5, event: "return", description: "返回 previous 的值 8。", variables: { previous: 8, current: 13, returnValue: 8 }, changedVariables: ["returnValue"] },
+    { step: 9, line: 7, event: "output", description: "print 输出 8。", variables: { result: 8 }, changedVariables: ["result"], stdout: "8" },
+    { step: 10, line: 7, event: "end", description: "程序执行结束。", variables: { result: 8 }, changedVariables: [], stdout: "8" },
+  ],
 };
