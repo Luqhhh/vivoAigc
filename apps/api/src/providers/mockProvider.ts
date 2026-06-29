@@ -40,30 +40,29 @@ function randomHex(): string {
     .padStart(8, "0");
 }
 
-function isBinarySearchCode(code: string): boolean {
-  return (
-    code.includes("binary_search") ||
-    (code.includes("left") && code.includes("mid"))
-  );
+function normalizeNewlines(code: string): string {
+  return code.replace(/\r\n|\r/g, "\n");
 }
 
-function normalizeCode(code: string): string {
-  return code.replace(/\r\n/g, "\n").trim();
+function exampleForCode(code: string) {
+  const normalizedCode = normalizeNewlines(code);
+
+  return examples.find(
+    ({ code: exampleCode }) =>
+      normalizeNewlines(exampleCode) === normalizedCode,
+  );
 }
 
 function analysisForExampleCode(
   code: string,
 ): CodeAnalyzeResponse | undefined {
-  const normalizedCode = normalizeCode(code);
-  const example = examples.find(
-    ({ code: exampleCode }) => normalizeCode(exampleCode) === normalizedCode,
-  );
+  const example = exampleForCode(code);
 
   return example ? ANALYSIS_BY_EXAMPLE_ID.get(example.id) : undefined;
 }
 
 function createGenericAnalysis(code: string): CodeAnalyzeResponse {
-  const sourceLines = code.replace(/\r\n/g, "\n").split("\n");
+  const sourceLines = normalizeNewlines(code).split("\n");
   const lineExplanations: CodeAnalyzeResponse["lineExplanations"] =
     sourceLines.flatMap((sourceLine, index) =>
       sourceLine.trim().length === 0
@@ -143,19 +142,19 @@ export function answerWithMockTutor(
   request: TutorChatRequest,
 ): TutorChatResponse {
   const step = request.currentStep ?? 1;
-  const code = request.code.toLowerCase();
+  const exampleId = exampleForCode(request.code)?.id;
   let answer: string;
   let referencedSteps = [step];
   let suggestedFollowups: string[];
 
-  if (isBinarySearchCode(code)) {
+  if (exampleId === "binary-search") {
     answer = `当前第 ${step} 步属于二分查找过程。请结合这一时刻的 left 和 right 理解当前搜索边界，并观察 mid 如何把区间分成两部分；mock 回答不会在请求未提供时猜测具体变量值。`;
     suggestedFollowups = [
       "left 和 right 如何决定当前搜索区间？",
       "mid 为什么能帮助排除一半区间？",
       "下一轮应该保留哪一侧区间？",
     ];
-  } else if (code.includes("fib")) {
+  } else if (exampleId === "fibonacci-recursion") {
     const baseCaseReturnValue = BASE_CASE_RETURN_VALUE_BY_STEP.get(step);
     answer =
       baseCaseReturnValue === undefined
