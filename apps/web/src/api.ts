@@ -90,10 +90,91 @@ function validatePayload<T>(schema: ZodType<T>, payload: unknown): T {
   return result.data;
 }
 
-export async function fetchHealth(): Promise<HealthResponse> {
-  const payload = await parseJson(await fetch(apiUrl("/api/health")));
+export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
+  const url = apiUrl("/api/health");
+  const payload = await parseJson(
+    signal ? await fetch(url, { signal }) : await fetch(url),
+  );
 
   return validatePayload(healthResponseSchema, payload);
+}
+
+interface HealthRetryOptions {
+  attempts?: number;
+  delayMs?: number;
+  signal?: AbortSignal;
+  sleep?: (delayMs: number) => Promise<void>;
+}
+
+function abortReason(signal?: AbortSignal): unknown {
+  return signal?.reason ?? new DOMException("The operation was aborted", "AbortError");
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw abortReason(signal);
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return typeof error === "object"
+    && error !== null
+    && "name" in error
+    && error.name === "AbortError";
+}
+
+function sleepWithSignal(delayMs: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+
+    let timer: number;
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => {
+      cleanup();
+      reject(abortReason(signal));
+    };
+
+    timer = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, delayMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+export async function fetchHealthWithRetry({
+  attempts = 4,
+  delayMs = 2_000,
+  signal,
+  sleep = (delay) => sleepWithSignal(delay, signal),
+}: HealthRetryOptions = {}): Promise<HealthResponse> {
+  let finalError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    throwIfAborted(signal);
+    try {
+      return await fetchHealth(signal);
+    } catch (error) {
+      throwIfAborted(signal);
+      if (isAbortError(error)) {
+        throw error;
+      }
+      finalError = error;
+      if (attempt < attempts - 1) {
+        await sleep(delayMs);
+      }
+    }
+  }
+
+  throw finalError instanceof Error
+    ? finalError
+    : new Error("服务健康检查失败");
 }
 
 export async function fetchExamples(): Promise<CodeExample[]> {

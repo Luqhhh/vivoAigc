@@ -669,14 +669,55 @@ print(fib(4))`);
       .toHaveAttribute("aria-live", "polite");
   });
 
+  test("recovers when the health check initially fails during a cold start", async () => {
+    const realHealth: HealthResponse = { ...health, llmMode: "real" };
+    healthHandler = vi
+      .fn<() => Promise<Response>>()
+      .mockRejectedValueOnce(new TypeError("cold start"))
+      .mockResolvedValueOnce(jsonResponse(realHealth));
+    vi.useFakeTimers();
+
+    render(<App />);
+    await act(async () => vi.advanceTimersByTimeAsync(2_000));
+
+    expect(screen.getByRole("status", { name: "服务状态：真实服务" }))
+      .toHaveTextContent("真实服务");
+    expect(healthHandler).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  test("cancels a scheduled health retry when the app unmounts", async () => {
+    healthHandler = vi
+      .fn<() => Promise<Response>>()
+      .mockRejectedValue(new TypeError("cold start"));
+    vi.useFakeTimers();
+
+    const { unmount } = render(<App />);
+    await act(async () => Promise.resolve());
+    expect(healthHandler).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(1);
+
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => vi.advanceTimersByTimeAsync(6_000));
+    expect(healthHandler).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
   test("provides meaningful empty and offline states", async () => {
     healthHandler = async () => Promise.reject(new Error("raw health failure"));
     examplesHandler = async () => Promise.reject(new Error("raw examples failure"));
+    vi.useFakeTimers();
     render(<App />);
 
     expect(screen.getByText("运行分析后，这里会显示执行时间轴。"))
       .toBeInTheDocument();
-    expect(await screen.findByText("服务离线")).toBeInTheDocument();
+    await act(async () => vi.advanceTimersByTimeAsync(6_000));
+    expect(screen.getByText("服务离线")).toBeInTheDocument();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: "示例" }));
     expect(await screen.findByText("暂无可用示例，可继续使用工作台中的默认代码。"))
       .toBeInTheDocument();

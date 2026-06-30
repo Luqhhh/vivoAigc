@@ -5,6 +5,7 @@ import {
   askTutor,
   fetchExamples,
   fetchHealth,
+  fetchHealthWithRetry,
 } from "../api";
 import type {
   CodeAnalyzeResponse,
@@ -156,6 +157,75 @@ describe("CodeMotion web API client", () => {
     await expect(fetchHealth()).resolves.toEqual(health);
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith("/api/health");
+  });
+
+  test("fetchHealthWithRetry recovers after a cold-start failure", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError("cold start"))
+      .mockResolvedValueOnce(jsonResponse(health));
+    const sleep = vi.fn<(delayMs: number) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    globalThis.fetch = fetchMock;
+
+    await expect(
+      fetchHealthWithRetry({ attempts: 3, delayMs: 1, sleep }),
+    ).resolves.toEqual(health);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledOnce();
+    expect(sleep).toHaveBeenCalledWith(1);
+  });
+
+  test("fetchHealthWithRetry throws the final error after exhausting attempts", async () => {
+    const offlineError = new TypeError("offline");
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(offlineError);
+    const sleep = vi.fn<(delayMs: number) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    globalThis.fetch = fetchMock;
+
+    await expect(
+      fetchHealthWithRetry({ attempts: 3, delayMs: 1, sleep }),
+    ).rejects.toThrow("offline");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  test("fetchHealthWithRetry does not fetch when its signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(health));
+    const sleep = vi.fn<(delayMs: number) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    globalThis.fetch = fetchMock;
+
+    await expect(
+      fetchHealthWithRetry({ signal: controller.signal, sleep }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  test("fetchHealthWithRetry does not retry an aborted fetch", async () => {
+    const controller = new AbortController();
+    const abortError = new DOMException("aborted", "AbortError");
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(abortError);
+    const sleep = vi.fn<(delayMs: number) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    globalThis.fetch = fetchMock;
+
+    await expect(
+      fetchHealthWithRetry({ signal: controller.signal, sleep }),
+    ).rejects.toBe(abortError);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledWith("/api/health", {
+      signal: controller.signal,
+    });
+    expect(sleep).not.toHaveBeenCalled();
   });
 
   test("fetchExamples sends GET /api/examples and unwraps examples", async () => {

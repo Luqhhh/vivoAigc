@@ -23,7 +23,12 @@ import {
   Waypoints,
 } from "lucide-react";
 
-import { analyzeCode, askTutor, fetchExamples, fetchHealth } from "./api";
+import {
+  analyzeCode,
+  askTutor,
+  fetchExamples,
+  fetchHealthWithRetry,
+} from "./api";
 import {
   getCurrentStackFrames,
   getCurrentTraceStep,
@@ -378,10 +383,12 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    fetchHealth().then((result) => { if (active) setService(result.ok ? result.llmMode : "offline"); }).catch(() => { if (active) setService("offline"); });
+    const healthController = new AbortController();
+    fetchHealthWithRetry({ signal: healthController.signal }).then((result) => { if (active) setService(result.ok ? result.llmMode : "offline"); }).catch(() => { if (active) setService("offline"); });
     fetchExamples().then((result) => { if (active) setExamples(result); }).catch(() => { if (active) setExamples([]); }).finally(() => { if (active) setExamplesLoading(false); });
     return () => {
       active = false;
+      healthController.abort();
       analysisGeneration.current += 1;
       tutorGeneration.current += 1;
     };
