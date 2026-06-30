@@ -1,4 +1,4 @@
-最后项目的交付效果：
+﻿最后项目的交付效果：
 
 基于手机的应用场景
 
@@ -14,12 +14,11 @@
 
 AppID
 
-2026757178
+<在部署平台配置 LANXIN_APP_ID Secret>
 
 AppKEY
 
-sk-xuanji-2026757178-SEN1bXpqY2RjSFZLdkhNUA==
-
+<在部署平台配置 LANXIN_APP_KEY Secret>
 
 
 作品名称
