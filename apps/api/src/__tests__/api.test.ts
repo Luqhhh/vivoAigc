@@ -975,6 +975,40 @@ describe("CodeMotion API", () => {
     expect(response.body.traceSteps.length).toBeGreaterThanOrEqual(6);
   });
 
+  it("limits public AI requests without limiting health checks", async () => {
+    const app = createApp({ llmMode: "mock", aiRateLimit: 2 });
+    const payload = { language: "python", code: fibonacciCode };
+
+    await request(app).post("/api/analyze-code").send(payload).expect(200);
+    await request(app).post("/api/analyze-code").send(payload).expect(200);
+    const limited = await request(app)
+      .post("/api/analyze-code")
+      .send(payload)
+      .expect(429);
+
+    expect(limited.body.error).toMatchObject({
+      code: "RATE_LIMITED",
+      recoverable: true,
+    });
+    await request(app).get("/api/health").expect(200);
+  });
+
+  it("keys forwarded requests by Render's first client IP", async () => {
+    const app = createApp({ llmMode: "mock", aiRateLimit: 2 });
+    const payload = { language: "python", code: fibonacciCode };
+    const analyzeFrom = (forwardedFor: string) =>
+      request(app)
+        .post("/api/analyze-code")
+        .set("X-Forwarded-For", forwardedFor)
+        .send(payload);
+
+    await analyzeFrom("203.0.113.10, 10.0.0.1").expect(200);
+    await analyzeFrom("203.0.113.10, 10.0.0.2").expect(200);
+    await analyzeFrom("203.0.113.10, 10.0.0.3").expect(429);
+
+    await analyzeFrom("198.51.100.20, 10.0.0.3").expect(200);
+  });
+
   it("returns tutor references for the requested current step", async () => {
     const response = await request(createApp({ llmMode: "mock" }))
       .post("/api/tutor-chat")

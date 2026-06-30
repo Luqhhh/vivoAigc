@@ -15,6 +15,7 @@ import {
   answerWithMockTutor,
   examples,
 } from "./providers/mockProvider.js";
+import { createAiRateLimiter } from "./rateLimit.js";
 import {
   codeAnalyzeRequestSchema,
   tutorChatRequestSchema,
@@ -25,6 +26,7 @@ const SERVICE_VERSION = "1.0.0";
 
 export type AppOptions = Partial<AppEnv> & {
   llmMode?: AppEnv["LLM_MODE"];
+  aiRateLimit?: number;
   requestLogger?: (entry: RequestLogEntry) => void;
 };
 
@@ -108,6 +110,8 @@ function defaultRequestLogger(entry: RequestLogEntry): void {
 export function createApp(options: AppOptions = {}) {
   const env = normalizeEnv(options);
   const app = express();
+  app.set("trust proxy", 1);
+  const aiRateLimiter = createAiRateLimiter(options.aiRateLimit ?? 30);
   const requestLogger = options.requestLogger ?? (
     env.NODE_ENV === "test" ? () => undefined : defaultRequestLogger
   );
@@ -152,6 +156,7 @@ export function createApp(options: AppOptions = {}) {
 
   app.post(
     "/api/analyze-code",
+    aiRateLimiter,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const input = codeAnalyzeRequestSchema.parse(req.body);
@@ -205,6 +210,7 @@ export function createApp(options: AppOptions = {}) {
 
   app.post(
     "/api/tutor-chat",
+    aiRateLimiter,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const input = tutorChatRequestSchema.parse(req.body);
