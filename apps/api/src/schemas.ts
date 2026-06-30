@@ -9,11 +9,19 @@ const primitiveValueSchema = z.union([
 
 const primitiveRecordSchema = z.record(primitiveValueSchema);
 const sourceSchema = z.enum(["lanxin", "mock", "fallback"]);
+const nonBlankString = (maxLength: number) =>
+  z
+    .string()
+    .min(1)
+    .max(maxLength)
+    .refine((value) => value.trim().length > 0, {
+      message: "不得仅包含空白字符。",
+    });
 
 export const codeAnalyzeRequestSchema = z
   .object({
     language: z.literal("python"),
-    code: z.string().min(1).max(12_000),
+    code: nonBlankString(12_000),
     stdin: z.string().max(4_000).optional(),
     visualizationFocus: z
       .enum(["auto", "recursion", "stack", "variables", "dp"])
@@ -24,11 +32,11 @@ export const codeAnalyzeRequestSchema = z
 
 export const tutorChatRequestSchema = z
   .object({
-    requestId: z.string().min(1),
-    code: z.string().min(1).max(12_000),
+    requestId: nonBlankString(500),
+    code: nonBlankString(12_000),
     currentStep: z.number().int().positive().optional(),
-    analysisSummary: z.string().min(1).max(3_000),
-    question: z.string().min(1).max(500),
+    analysisSummary: nonBlankString(3_000),
+    question: nonBlankString(500),
   })
   .strict();
 

@@ -25,7 +25,17 @@ const SERVICE_VERSION = "1.0.0";
 
 export type AppOptions = Partial<AppEnv> & {
   llmMode?: AppEnv["LLM_MODE"];
+  requestLogger?: (entry: RequestLogEntry) => void;
 };
+
+export interface RequestLogEntry {
+  requestId: string;
+  method: string;
+  route: string;
+  status: number;
+  durationMs: number;
+  source?: "lanxin" | "mock" | "fallback";
+}
 
 interface ApiErrorDetails {
   code: string;
@@ -82,12 +92,45 @@ function apiError(
   });
 }
 
+function sendSourcedJson<T extends { source: RequestLogEntry["source"] }>(
+  res: Response,
+  payload: T,
+): Response {
+  res.locals.responseSource = payload.source;
+  return res.json(payload);
+}
+
+function defaultRequestLogger(entry: RequestLogEntry): void {
+  console.info(JSON.stringify({ event: "http_request", ...entry }));
+}
+
 export function createApp(options: AppOptions = {}) {
   const env = normalizeEnv(options);
   const app = express();
+  const requestLogger = options.requestLogger ?? (
+    env.NODE_ENV === "test" ? () => undefined : defaultRequestLogger
+  );
 
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     res.locals.requestId = createRequestId();
+    const startedAt = Date.now();
+    res.once("finish", () => {
+      const source = res.locals.responseSource as RequestLogEntry["source"];
+      const entry: RequestLogEntry = {
+        requestId: res.locals.requestId,
+        method: req.method,
+        route: typeof req.route?.path === "string" ? req.route.path : req.path,
+        status: res.statusCode,
+        durationMs: Math.max(0, Date.now() - startedAt),
+        ...(source === undefined ? {} : { source }),
+      };
+
+      try {
+        requestLogger(entry);
+      } catch {
+        // Logging failures must not change an already-completed API response.
+      }
+    });
     next();
   });
   app.use(cors({ origin: corsOrigin(env.FRONTEND_ORIGIN) }));
@@ -123,7 +166,7 @@ export function createApp(options: AppOptions = {}) {
         if (env.LLM_MODE === "real") {
           try {
             const analysis = await analyzeWithLanxin(input, env);
-            return res.json({
+            return sendSourcedJson(res, {
               ...analysis,
               requestId: res.locals.requestId,
             });
@@ -133,7 +176,7 @@ export function createApp(options: AppOptions = {}) {
             }
 
             const mock = analyzeWithMock(input);
-            return res.json({
+            return sendSourcedJson(res, {
               ...mock,
               requestId: res.locals.requestId,
               source: "fallback",
@@ -149,7 +192,7 @@ export function createApp(options: AppOptions = {}) {
           }
         }
 
-        return res.json({
+        return sendSourcedJson(res, {
           ...analyzeWithMock(input),
           requestId: res.locals.requestId,
         });
@@ -166,20 +209,23 @@ export function createApp(options: AppOptions = {}) {
         const input = tutorChatRequestSchema.parse(req.body);
         if (env.LLM_MODE === "real") {
           try {
-            return res.json(await answerWithLanxinTutor(input, env));
+            return sendSourcedJson(
+              res,
+              await answerWithLanxinTutor(input, env),
+            );
           } catch (error) {
             if (!(error instanceof LanxinProviderError)) {
               throw error;
             }
 
-            return res.json({
+            return sendSourcedJson(res, {
               ...answerWithMockTutor(input),
               source: "fallback",
             });
           }
         }
 
-        return res.json(answerWithMockTutor(input));
+        return sendSourcedJson(res, answerWithMockTutor(input));
       } catch (error) {
         next(error);
       }

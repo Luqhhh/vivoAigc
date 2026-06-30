@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createApp } from "../app.js";
+import { createApp, type RequestLogEntry } from "../app.js";
 import {
   analyzeWithMock,
   answerWithMockTutor,
@@ -881,6 +881,60 @@ describe("CodeMotion API", () => {
       code: "INVALID_INPUT",
       recoverable: true,
     });
+  });
+
+  it("rejects whitespace-only code and tutor questions", async () => {
+    const app = createApp({ llmMode: "mock" });
+
+    await request(app)
+      .post("/api/analyze-code")
+      .send({ language: "python", code: "  \n\t" })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body.error.code).toBe("INVALID_INPUT");
+      });
+
+    await request(app)
+      .post("/api/tutor-chat")
+      .send({
+        requestId: "req-whitespace",
+        code: fibonacciCode,
+        analysisSummary: "递归计算 fib(4)。",
+        question: " \t ",
+      })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body.error.code).toBe("INVALID_INPUT");
+      });
+  });
+
+  it("logs request metadata and response source without secrets or request content", async () => {
+    const logs: RequestLogEntry[] = [];
+    const app = createApp({
+      llmMode: "mock",
+      LANXIN_APP_ID: "must-not-be-logged-app-id",
+      LANXIN_APP_KEY: "must-not-be-logged-app-key",
+      requestLogger: (entry) => logs.push(entry),
+    });
+
+    const response = await request(app)
+      .post("/api/analyze-code")
+      .send({ language: "python", code: fibonacciCode })
+      .expect(200);
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toEqual({
+      requestId: response.body.requestId,
+      method: "POST",
+      route: "/api/analyze-code",
+      status: 200,
+      durationMs: expect.any(Number),
+      source: "mock",
+    });
+    expect(logs[0].durationMs).toBeGreaterThanOrEqual(0);
+    expect(JSON.stringify(logs[0])).not.toMatch(
+      /must-not-be-logged|def fib|print\(fib/i,
+    );
   });
 
   it("returns a recoverable invalid JSON error for malformed JSON", async () => {
