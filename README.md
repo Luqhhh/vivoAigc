@@ -44,9 +44,8 @@ apps/api: Express + TypeScript + Zod
 ├── docs/
 │   ├── deployment.md         # 本地、生产和 Capacitor 8 APK 教程
 │   ├── demo-script.md        # 3 分钟与 8 分钟演示脚本
-│   ├── test-report.md        # Task 8 待执行验收报告
+│   ├── test-report.md        # 本地验证结果与待执行验收项
 │   └── superpowers/          # 已批准设计与实施计划
-├── spec/                     # 产品、交付和验收规格（只读依据）
 ├── package.json              # pnpm workspace 根脚本
 ├── pnpm-lock.yaml
 └── pnpm-workspace.yaml
@@ -95,8 +94,8 @@ pnpm dev:web
 - [部署与 Capacitor 8 APK 教程](docs/deployment.md)
 - [3 分钟与 8 分钟演示脚本](docs/demo-script.md)
 - [测试报告与证据计划](docs/test-report.md)
-- [交付内容规格](spec/03-delivery-content.md)
-- [验收标准与证据规格](spec/04-acceptance-criteria-and-test-evidence.md)
+- [已批准的 Option A 设计](docs/superpowers/specs/2026-06-26-codemotion-option-a-design.md)
+- [Option A 实施计划](docs/superpowers/plans/2026-06-26-codemotion-option-a-implementation.md)
 
 ## 当前交付边界
 

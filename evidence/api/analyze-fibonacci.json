@@ -1,5 +1,5 @@
 ﻿{
-    "requestId":  "req-1782662471676-47e2bda5",
+    "requestId":  "req-1782781469696-c2b6f67e",
     "language":  "python",
     "title":  "斐波那契递归执行过程",
     "summary":  "fib(4) 会拆分成更小的 fib 调用，直到 fib(1) 或 fib(0) 命中递归出口，再逐层合并返回值。",
@@ -23,19 +23,19 @@
                              },
                              {
                                  "line":  2,
-                                 "code":  "if n \u003c= 1:",
+                                 "code":  "    if n \u003c= 1:",
                                  "explanation":  "判断是否到达 fib(0) 或 fib(1) 的递归出口。",
                                  "role":  "condition"
                              },
                              {
                                  "line":  3,
-                                 "code":  "return n",
+                                 "code":  "        return n",
                                  "explanation":  "出口直接返回 0 或 1，停止继续向下递归。",
                                  "role":  "return"
                              },
                              {
                                  "line":  4,
-                                 "code":  "return fib(n - 1) + fib(n - 2)",
+                                 "code":  "    return fib(n - 1) + fib(n - 2)",
                                  "explanation":  "分别计算两个更小的子问题，并将返回值相加。",
                                  "role":  "recursive-call"
                              },
@@ -389,6 +389,52 @@
                                        ]
                         },
                         {
+                            "step":  3,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  2,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+                                                              "isBaseCase":  false
+                                                          },
+                                               "status":  "active"
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  4,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f3",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  3
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "active"
+                                           }
+                                       ]
+                        },
+                        {
                             "step":  5,
                             "frames":  [
                                            {
@@ -418,9 +464,62 @@
                                            {
                                                "id":  "frame-f2-left",
                                                "functionName":  "fib",
-                                               "line":  1,
+                                               "line":  4,
                                                "params":  {
                                                               "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "active"
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  6,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f3",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  3
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f2-left",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f1-left",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  1
                                                           },
                                                "locals":  {
 
@@ -464,9 +563,9 @@
                                                               "n":  2
                                                           },
                                                "locals":  {
-                                                              "leftValue":  1
+
                                                           },
-                                               "status":  "active"
+                                               "status":  "waiting"
                                            },
                                            {
                                                "id":  "frame-f1-left",
@@ -480,6 +579,59 @@
                                                           },
                                                "status":  "returned",
                                                "returnValue":  1
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  8,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f3",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  3
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f2-left",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f0-left",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  0
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "active"
                                            }
                                        ]
                         },
@@ -518,10 +670,9 @@
                                                               "n":  2
                                                           },
                                                "locals":  {
-                                                              "leftValue":  1,
-                                                              "rightValue":  0
+
                                                           },
-                                               "status":  "active"
+                                               "status":  "waiting"
                                            },
                                            {
                                                "id":  "frame-f0-left",
@@ -535,6 +686,90 @@
                                                           },
                                                "status":  "returned",
                                                "returnValue":  0
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  10,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f3",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  3
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f2-left",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  2
+                                                          },
+                                               "locals":  {
+                                                              "leftValue":  1,
+                                                              "rightValue":  0
+                                                          },
+                                               "status":  "returned",
+                                               "returnValue":  1
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  11,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f3",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  3
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f1-middle",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  1
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "active"
                                            }
                                        ]
                         },
@@ -561,10 +796,9 @@
                                                               "n":  3
                                                           },
                                                "locals":  {
-                                                              "leftValue":  1,
-                                                              "rightValue":  1
+
                                                           },
-                                               "status":  "active"
+                                               "status":  "waiting"
                                            },
                                            {
                                                "id":  "frame-f1-middle",
@@ -592,9 +826,9 @@
                                                               "n":  4
                                                           },
                                                "locals":  {
-                                                              "leftValue":  2
+
                                                           },
-                                               "status":  "active"
+                                               "status":  "waiting"
                                            },
                                            {
                                                "id":  "frame-f3",
@@ -623,16 +857,57 @@
                                                               "n":  4
                                                           },
                                                "locals":  {
-                                                              "leftValue":  2
+
                                                           },
                                                "status":  "waiting"
                                            },
                                            {
                                                "id":  "frame-f2-right",
                                                "functionName":  "fib",
-                                               "line":  1,
+                                               "line":  4,
                                                "params":  {
                                                               "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "active"
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  15,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f2-right",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f1-right",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  1
                                                           },
                                                "locals":  {
 
@@ -652,7 +927,7 @@
                                                               "n":  4
                                                           },
                                                "locals":  {
-                                                              "leftValue":  2
+
                                                           },
                                                "status":  "waiting"
                                            },
@@ -664,9 +939,9 @@
                                                               "n":  2
                                                           },
                                                "locals":  {
-                                                              "leftValue":  1
+
                                                           },
-                                               "status":  "active"
+                                               "status":  "waiting"
                                            },
                                            {
                                                "id":  "frame-f1-right",
@@ -684,6 +959,47 @@
                                        ]
                         },
                         {
+                            "step":  17,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f2-right",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f0-right",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  0
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "active"
+                                           }
+                                       ]
+                        },
+                        {
                             "step":  18,
                             "frames":  [
                                            {
@@ -694,7 +1010,49 @@
                                                               "n":  4
                                                           },
                                                "locals":  {
-                                                              "leftValue":  2
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f2-right",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  2
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "waiting"
+                                           },
+                                           {
+                                               "id":  "frame-f0-right",
+                                               "functionName":  "fib",
+                                               "line":  3,
+                                               "params":  {
+                                                              "n":  0
+                                                          },
+                                               "locals":  {
+
+                                                          },
+                                               "status":  "returned",
+                                               "returnValue":  0
+                                           }
+                                       ]
+                        },
+                        {
+                            "step":  19,
+                            "frames":  [
+                                           {
+                                               "id":  "frame-f4",
+                                               "functionName":  "fib",
+                                               "line":  4,
+                                               "params":  {
+                                                              "n":  4
+                                                          },
+                                               "locals":  {
+
                                                           },
                                                "status":  "waiting"
                                            },
@@ -709,20 +1067,8 @@
                                                               "leftValue":  1,
                                                               "rightValue":  0
                                                           },
-                                               "status":  "active"
-                                           },
-                                           {
-                                               "id":  "frame-f0-right",
-                                               "functionName":  "fib",
-                                               "line":  3,
-                                               "params":  {
-                                                              "n":  0
-                                                          },
-                                               "locals":  {
-
-                                                          },
                                                "status":  "returned",
-                                               "returnValue":  0
+                                               "returnValue":  1
                                            }
                                        ]
                         },
@@ -939,10 +1285,7 @@
                             }
                         ],
     "warnings":  [
-                     {
-                         "code":  "MOCK_USED",
-                         "message":  "当前展示稳定的斐波那契 mock 分析结果。"
-                     }
+
                  ],
     "source":  "mock"
 }
