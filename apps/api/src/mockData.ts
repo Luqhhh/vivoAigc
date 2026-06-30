@@ -1519,7 +1519,108 @@ export const climbingStairsAnalysis: CodeAnalyzeResponse = {
   source: "mock",
 };
 
-export const acceptanceBinarySearchAnalysis: CodeAnalyzeResponse = {
+function withSingleFrameSnapshots(
+  analysis: CodeAnalyzeResponse,
+  frame: {
+    id: string;
+    functionName: string;
+    params: CodeAnalyzeResponse["stackFrames"][number]["frames"][number]["params"];
+  },
+): CodeAnalyzeResponse {
+  return {
+    ...analysis,
+    stackFrames: analysis.traceSteps.flatMap((step) => {
+      if (step.activeFrameId !== frame.id) {
+        return [];
+      }
+
+      const locals = Object.fromEntries(
+        Object.entries(step.variables).filter(([key]) => !(key in frame.params)),
+      );
+      const returnValue = step.variables.returnValue;
+
+      return [{
+        step: step.step,
+        frames: [{
+          ...frame,
+          line: step.line,
+          locals,
+          status: step.event === "return" ? "returned" : "active",
+          ...(returnValue === undefined ? {} : { returnValue }),
+        }],
+      }];
+    }),
+  };
+}
+
+function withRecursionStackSnapshots(
+  analysis: CodeAnalyzeResponse,
+): CodeAnalyzeResponse {
+  const tree = analysis.recursionTree;
+  if (!tree) {
+    return analysis;
+  }
+
+  const nodes = new Map(tree.nodes.map((node) => [node.id, node]));
+  const parents = new Map(tree.edges.map((edge) => [edge.to, edge.from]));
+  const frameIds = new Map(
+    analysis.traceSteps.flatMap((step) =>
+      step.activeFrameId && step.activeRecursionNodeId
+        ? [[step.activeRecursionNodeId, step.activeFrameId] as const]
+        : [],
+    ),
+  );
+
+  return {
+    ...analysis,
+    stackFrames: analysis.traceSteps.flatMap((step) => {
+      if (!step.activeFrameId || !step.activeRecursionNodeId) {
+        return [];
+      }
+
+      const callChain: string[] = [];
+      let nodeId: string | undefined = step.activeRecursionNodeId;
+      while (nodeId) {
+        callChain.unshift(nodeId);
+        nodeId = parents.get(nodeId);
+      }
+
+      return [{
+        step: step.step,
+        frames: callChain.map((currentNodeId) => {
+          const node = nodes.get(currentNodeId)!;
+          const isActive = currentNodeId === step.activeRecursionNodeId;
+          const locals = isActive
+            ? Object.fromEntries(
+                Object.entries(step.variables).filter(
+                  ([key]) => !(key in node.args) && key !== "returnValue",
+                ),
+              )
+            : {};
+          const returnValue = isActive ? step.variables.returnValue : undefined;
+
+          return {
+            id: frameIds.get(currentNodeId)!,
+            functionName: node.functionName,
+            line: isActive ? step.line : 4,
+            params: node.args,
+            locals,
+            status: isActive
+              ? step.event === "return" ? "returned" : "active"
+              : "waiting",
+            ...(returnValue === undefined ? {} : { returnValue }),
+          };
+        }),
+      }];
+    }),
+  };
+}
+
+export const acceptanceFibonacciAnalysis = withRecursionStackSnapshots(
+  fibonacciAnalysis,
+);
+
+export const acceptanceBinarySearchAnalysis: CodeAnalyzeResponse = withSingleFrameSnapshots({
   ...binarySearchAnalysis,
   summary:
     "在 [1, 3, 5, 7, 9] 中查找目标值 7：先检查索引 2，再把 left 收缩到 3，最终返回索引 3。",
@@ -1538,15 +1639,13 @@ export const acceptanceBinarySearchAnalysis: CodeAnalyzeResponse = {
     { step: 12, line: 13, event: "output", description: "print 输出索引 3。", variables: { result: 3 }, changedVariables: ["result"], stdout: "3" },
     { step: 13, line: 13, event: "end", description: "程序执行结束。", variables: { result: 3 }, changedVariables: [], stdout: "3" },
   ],
-  stackFrames: [
-    { step: 1, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 1, params: { target: 7, itemCount: 5 }, locals: {}, status: "active" }] },
-    { step: 4, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 4, params: { target: 7, itemCount: 5 }, locals: { left: 0, right: 4, mid: 2, midValue: 5 }, status: "active" }] },
-    { step: 9, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 4, params: { target: 7, itemCount: 5 }, locals: { left: 3, right: 4, mid: 3, midValue: 7 }, status: "active" }] },
-    { step: 11, frames: [{ id: "frame-binary-search", functionName: "binary_search", line: 6, params: { target: 7, itemCount: 5 }, locals: { left: 3, right: 4, mid: 3, midValue: 7 }, status: "returned", returnValue: 3 }] },
-  ],
-};
+}, {
+  id: "frame-binary-search",
+  functionName: "binary_search",
+  params: { target: 7, itemCount: 5 },
+});
 
-export const acceptanceBracketStackAnalysis: CodeAnalyzeResponse = {
+export const acceptanceBracketStackAnalysis: CodeAnalyzeResponse = withSingleFrameSnapshots({
   ...bracketStackAnalysis,
   lineExplanations: [
     { line: 1, code: "", explanation: "定义检查括号字符串是否合法的函数。", role: "input" },
@@ -1575,11 +1674,11 @@ export const acceptanceBracketStackAnalysis: CodeAnalyzeResponse = {
     { step: 10, line: 13, event: "output", description: "print 输出 True。", variables: { result: true }, changedVariables: ["result"], stdout: "True" },
     { step: 11, line: 13, event: "end", description: "程序执行结束。", variables: { result: true }, changedVariables: [], stdout: "True" },
   ],
-  stackFrames: [
-    { step: 1, frames: [{ id: "frame-is-valid", functionName: "is_valid", line: 1, params: { s: "([])" }, locals: { stack: "" }, status: "active" }] },
-    { step: 9, frames: [{ id: "frame-is-valid", functionName: "is_valid", line: 11, params: { s: "([])" }, locals: { stack: "" }, status: "returned", returnValue: true }] },
-  ],
-};
+}, {
+  id: "frame-is-valid",
+  functionName: "is_valid",
+  params: { s: "([])" },
+});
 
 const DFS_VISITED = "(0,0),(0,1),(1,1),(1,2),(2,2)";
 

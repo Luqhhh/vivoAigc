@@ -711,6 +711,20 @@ describe("CodeMotion API", () => {
         }
       }
       expectOrderedEvents(traceSteps, expected.events);
+      for (const step of traceSteps) {
+        if (step.activeFrameId) {
+          const snapshot = response.body.stackFrames.find(
+            (item: { step: number }) => item.step === step.step,
+          );
+          expect(
+            snapshot,
+            `${example.category} step ${step.step} must include its active frame`,
+          ).toBeDefined();
+          expect(snapshot.frames.some(
+            ({ id }: { id: string }) => id === step.activeFrameId,
+          )).toBe(true);
+        }
+      }
 
       switch (example.category) {
         case "recursion":
@@ -751,18 +765,15 @@ describe("CodeMotion API", () => {
           expect(traceSteps.at(-1)?.stdout).toBe("5");
           expect(response.body.stackFrames.length).toBeGreaterThan(0);
           for (const step of traceSteps) {
-            if (step.activeFrameId) {
+            if (
+              step.activeFrameId &&
+              typeof step.variables.visited === "string"
+            ) {
               const snapshot = response.body.stackFrames.find(
                 (item: { step: number }) => item.step === step.step,
               );
-              expect(snapshot).toBeDefined();
-              expect(snapshot.frames.some(
-                ({ id }: { id: string }) => id === step.activeFrameId,
-              )).toBe(true);
-              if (typeof step.variables.visited === "string") {
-                for (const frame of snapshot.frames) {
-                  expect(frame.locals.visited).toBe(step.variables.visited);
-                }
+              for (const frame of snapshot.frames) {
+                expect(frame.locals.visited).toBe(step.variables.visited);
               }
             }
           }

@@ -3,8 +3,8 @@ import {
   acceptanceBracketStackAnalysis,
   acceptanceClimbingStairsAnalysis,
   acceptanceDepthFirstSearchAnalysis,
+  acceptanceFibonacciAnalysis,
   examples,
-  fibonacciAnalysis,
 } from "../mockData.js";
 import type {
   CodeAnalyzeRequest,
@@ -27,7 +27,7 @@ const BASE_CASE_RETURN_VALUE_BY_STEP = new Map<number, number>([
 ]);
 
 const ANALYSIS_BY_EXAMPLE_ID = new Map<string, CodeAnalyzeResponse>([
-  ["fibonacci-recursion", fibonacciAnalysis],
+  ["fibonacci-recursion", acceptanceFibonacciAnalysis],
   ["binary-search", acceptanceBinarySearchAnalysis],
   ["bracket-stack", acceptanceBracketStackAnalysis],
   ["depth-first-search", acceptanceDepthFirstSearchAnalysis],
