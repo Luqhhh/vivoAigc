@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AppEnv } from "../env.js";
+import { loadEnv, type AppEnv } from "../env.js";
 import { fibonacciAnalysis } from "../mockData.js";
 import {
   analyzeWithLanxin,
@@ -30,6 +30,7 @@ const env: AppEnv = {
   LANXIN_API_URL: "https://lanxin.example.test/v1/chat/completions",
   LANXIN_APP_ID: "test-app-id",
   LANXIN_APP_KEY: "test-app-key",
+  LANXIN_MODEL: "Doubao-Seed-2.0-mini",
   FRONTEND_ORIGIN: "http://localhost:5173",
 };
 
@@ -81,6 +82,14 @@ function jsonResponse(body: unknown, status = 200): Response {
 afterEach(() => {
   globalThis.fetch = originalFetch;
   vi.restoreAllMocks();
+});
+
+describe("Lanxin environment", () => {
+  it("uses the official competition model by default", () => {
+    expect(loadEnv({} as NodeJS.ProcessEnv).LANXIN_MODEL).toBe(
+      "Doubao-Seed-2.0-mini",
+    );
+  });
 });
 
 describe("CodeMotion Lanxin prompts", () => {
@@ -152,16 +161,20 @@ describe("Lanxin provider", () => {
     expect(init?.method).toBe("POST");
     expect(init?.headers).toMatchObject({
       "content-type": "application/json",
-      "x-lanxin-app-id": env.LANXIN_APP_ID,
       Authorization: `Bearer ${env.LANXIN_APP_KEY}`,
     });
+    expect(init?.headers).not.toHaveProperty("x-lanxin-app-id");
 
     const body = JSON.parse(String(init?.body));
-    expect(body.appId).toBe(env.LANXIN_APP_ID);
-    expect(body.messages).toHaveLength(1);
-    expect(body.messages[0]).toMatchObject({ role: "user" });
-    expect(body.messages[0].content).toContain(fibonacciCode);
+    expect(body.model).toBe("Doubao-Seed-2.0-mini");
     expect(body.temperature).toBe(0.2);
+    expect(body.stream).toBe(false);
+    expect(body.messages).toEqual([
+      expect.objectContaining({ role: "user" }),
+    ]);
+    expect(body.messages[0].content).toContain(fibonacciCode);
+    expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(body).not.toHaveProperty("appId");
   });
 
   it.each([

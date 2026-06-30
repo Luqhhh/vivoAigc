@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { AppEnv } from "../env.js";
 import { buildAnalysisPrompt, buildTutorPrompt } from "../prompt.js";
 import {
@@ -17,6 +19,7 @@ interface LanxinConfig {
   url: string;
   appId: string;
   appKey: string;
+  model: string;
 }
 
 export class LanxinProviderError extends Error {
@@ -41,6 +44,7 @@ function ensureConfig(env: AppEnv): LanxinConfig {
     url: env.LANXIN_API_URL,
     appId: env.LANXIN_APP_ID,
     appKey: env.LANXIN_APP_KEY,
+    model: env.LANXIN_MODEL,
   };
 }
 
@@ -118,13 +122,14 @@ async function requestLanxin(prompt: string, env: AppEnv): Promise<unknown> {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-lanxin-app-id": config.appId,
           Authorization: `Bearer ${config.appKey}`,
         },
         body: JSON.stringify({
-          appId: config.appId,
+          requestId: randomUUID(),
+          model: config.model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.2,
+          stream: false,
         }),
         signal: controller.signal,
       });

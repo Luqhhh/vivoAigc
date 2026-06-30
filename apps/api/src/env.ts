@@ -10,6 +10,7 @@ const envSchema = z.object({
   LANXIN_API_URL: z.string().url().optional(),
   LANXIN_APP_ID: z.string().min(1).optional(),
   LANXIN_APP_KEY: z.string().min(1).optional(),
+  LANXIN_MODEL: z.string().min(1).default("Doubao-Seed-2.0-mini"),
   FRONTEND_ORIGIN: z.string().default("http://localhost:5173"),
 });
 

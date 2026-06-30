@@ -53,6 +53,7 @@ function normalizeEnv(options: AppOptions): AppEnv {
     LANXIN_API_URL: options.LANXIN_API_URL ?? defaults.LANXIN_API_URL,
     LANXIN_APP_ID: options.LANXIN_APP_ID ?? defaults.LANXIN_APP_ID,
     LANXIN_APP_KEY: options.LANXIN_APP_KEY ?? defaults.LANXIN_APP_KEY,
+    LANXIN_MODEL: options.LANXIN_MODEL ?? defaults.LANXIN_MODEL,
     FRONTEND_ORIGIN: options.FRONTEND_ORIGIN ?? defaults.FRONTEND_ORIGIN,
   };
 }
