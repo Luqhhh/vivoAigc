@@ -266,7 +266,12 @@ describe("CodeMotion application", () => {
     expect(screen.getByText("CodeMotion")).toBeInTheDocument();
     expect(screen.getByText("Python")).toBeInTheDocument();
     expect((screen.getByLabelText("Python 代码") as HTMLTextAreaElement).value)
-      .toContain("def fibonacci(n):");
+      .toBe(`def fib(n):
+    if n <= 1:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+print(fib(4))`);
     expect(screen.getByText("6 行")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "分析代码" })).toBeEnabled();
     for (const tab of ["工作台", "示例", "练习", "作品"]) {
@@ -543,6 +548,30 @@ describe("CodeMotion application", () => {
     await act(async () => vi.advanceTimersByTime(900));
     expect(screen.getByText("第 3 / 3 步")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "开始播放" })).toBeDisabled();
+  });
+
+  test("derives recursion tree status and return values from the current step", async () => {
+    render(<App />);
+    await analyzeCurrentCode();
+    fireEvent.click(screen.getByRole("button", { name: "递归树" }));
+
+    const root = screen.getByRole("button", { name: "跳转到 fib(3) 的进入步骤" });
+    const child = screen.getByRole("button", { name: "跳转到 fib(2) 的进入步骤" });
+    const leaf = screen.getByRole("button", { name: "跳转到 fib(1) 的进入步骤" });
+    expect(root).toHaveTextContent("执行中");
+    expect(child).toHaveTextContent("等待");
+    expect(leaf).toHaveTextContent("等待");
+    expect(leaf).not.toHaveTextContent("返回 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "下一步" }));
+    expect(root).toHaveTextContent("等待");
+    expect(child).toHaveTextContent("执行中");
+    expect(leaf).toHaveTextContent("等待");
+
+    fireEvent.click(screen.getByRole("button", { name: "下一步" }));
+    expect(root).toHaveTextContent("等待");
+    expect(child).toHaveTextContent("等待");
+    expect(leaf).toHaveTextContent("返回 1");
   });
 
   test("sends quick and typed tutor questions and exposes referenced steps", async () => {

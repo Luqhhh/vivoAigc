@@ -41,12 +41,12 @@ import type {
   TutorMessage,
 } from "./types";
 
-const DEFAULT_CODE = `def fibonacci(n):
+const DEFAULT_CODE = `def fib(n):
     if n <= 1:
         return n
-    return fibonacci(n - 1) + fibonacci(n - 2)
+    return fib(n - 1) + fib(n - 2)
 
-print(fibonacci(6))`;
+print(fib(4))`;
 
 type ServiceStatus = "checking" | "mock" | "real" | "offline";
 type Speed = 0.5 | 1 | 1.5;
@@ -223,19 +223,32 @@ interface TreeViewProps extends TimelineViewProps {
 function TreeView({ analysis, stepIndex, onJump }: TreeViewProps) {
   const tree = analysis?.recursionTree;
   if (!tree || tree.nodes.length === 0) return <EmptyState text="这段代码没有识别到递归调用树。" />;
-  const activeNode = getCurrentTraceStep(stepIndex, analysis)?.activeRecursionNodeId;
+  const traceStep = getCurrentTraceStep(stepIndex, analysis);
+  const activeNode = traceStep?.activeRecursionNodeId;
+  const currentStep = traceStep?.step ?? 0;
   const depths = getTreeDepths(tree.nodes, tree.edges, tree.rootId);
   return (
     <div className="tree-view" aria-label="递归调用树">
-      {tree.nodes.map((node) => (
-        <div key={node.id} className={`tree-row ${node.id === activeNode ? "is-active" : ""}`} style={{ "--tree-depth": depths.get(node.id) ?? 0 } as React.CSSProperties}>
-          <span className="tree-branch" aria-hidden="true">{depths.get(node.id) ? "└" : "●"}</span>
-          <button type="button" onClick={() => onJump(node.enterStep)} aria-label={`跳转到 ${node.label} 的进入步骤`}>
-            <strong>{node.label}</strong><span>{node.status === "returned" ? `返回 ${formatValue(node.returnValue ?? null)}` : node.status === "active" ? "执行中" : "等待"}</span>
-          </button>
-          <small>参数 <KeyValues values={node.args} /></small>
-        </div>
-      ))}
+      {tree.nodes.map((node) => {
+        const status = node.exitStep !== undefined && currentStep >= node.exitStep
+          ? "returned"
+          : node.id === activeNode && currentStep >= node.enterStep
+            ? "active"
+            : "waiting";
+        const statusLabel = status === "returned"
+          ? `返回 ${formatValue(node.returnValue ?? null)}`
+          : status === "active" ? "执行中" : "等待";
+
+        return (
+          <div key={node.id} className={`tree-row ${status === "active" ? "is-active" : ""}`} style={{ "--tree-depth": depths.get(node.id) ?? 0 } as React.CSSProperties}>
+            <span className="tree-branch" aria-hidden="true">{depths.get(node.id) ? "└" : "●"}</span>
+            <button type="button" onClick={() => onJump(node.enterStep)} aria-label={`跳转到 ${node.label} 的进入步骤`}>
+              <strong>{node.label}</strong><span>{statusLabel}</span>
+            </button>
+            <small>参数 <KeyValues values={node.args} /></small>
+          </div>
+        );
+      })}
       <div className="edge-summary">连接：{tree.edges.map((edge) => `${edge.from} → ${edge.to}${edge.label ? ` (${edge.label})` : ""}`).join("；")}</div>
     </div>
   );
