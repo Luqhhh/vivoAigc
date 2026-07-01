@@ -4,16 +4,18 @@
 
 **Goal:** Replace the blocked Render deployment with a tested Vercel Hobby deployment and produce a verified real Lanxin API origin for the APK build.
 
-**Architecture:** Vercel imports `apps/api` as the project Root Directory and detects `src/server.ts` as one Express function. The server module exports the Express instance on Vercel, retains local port listening outside Vercel, and uses a 60-second Hobby function duration. Live verification records health, real-provider, and local fallback evidence without persisting credentials.
+**Architecture:** Vercel imports `apps/api` as the project Root Directory and uses zero-config Express detection for the default-exported app in `src/server.ts`, with Fluid Compute enabled by default. The server module retains local port listening outside Vercel. `vercel.json` is schema-only and deliberately omits a traditional `functions` mapping. The API uses Node 22.x, the repository pins pnpm 10.34.4, and the Lanxin provider enforces a 45-second upstream timeout. Live verification records health, real-provider, and local fallback evidence without persisting credentials.
 
-**Tech Stack:** TypeScript, Express 4, Vitest 2, pnpm 11, Vercel Hobby Node.js 22, PowerShell.
+**Tech Stack:** TypeScript, Express 4, Vitest 2, pnpm 10.34.4, Vercel Hobby Node.js 22, PowerShell.
+
+**Build-evidence correction:** The production build for commit `5ed8d1d` failed because the `src/server.ts` pattern in `functions` did not match a Serverless Function inside an `api` directory. The corrected handoff removes that mapping and does not claim a successful live redeploy yet.
 
 ---
 
 ## File Map
 
 - Modify `apps/api/src/server.ts`: export the Express app and avoid listening inside Vercel.
-- Create `apps/api/vercel.json`: configure the Express function duration.
+- Create `apps/api/vercel.json`: retain only the official schema for zero-config Express detection.
 - Modify `apps/api/package.json`: declare Node 22.x.
 - Create `apps/api/src/__tests__/vercelConfig.test.ts`: guard Vercel runtime configuration.
 - Create `apps/api/src/__tests__/server.test.ts`: guard Vercel export and listener behavior.
@@ -48,16 +50,23 @@ const vercel = JSON.parse(
   readFileSync(new URL("vercel.json", apiRoot), "utf8"),
 ) as {
   $schema?: string;
-  functions?: Record<string, { maxDuration?: number }>;
+  functions?: unknown;
 };
 const packageJson = JSON.parse(
   readFileSync(new URL("package.json", apiRoot), "utf8"),
 ) as { engines?: { node?: string } };
+const repositoryPackageJson = JSON.parse(
+  readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"),
+) as { packageManager?: string };
 
 describe("Vercel API deployment", () => {
-  it("runs the Express entry for up to the Hobby maximum", () => {
+  it("uses zero-config Express detection without traditional function globs", () => {
     expect(vercel.$schema).toBe("https://openapi.vercel.sh/vercel.json");
-    expect(vercel.functions?.["src/server.ts"]?.maxDuration).toBe(60);
+    expect(vercel.functions).toBeUndefined();
+  });
+
+  it("uses a Vercel-compatible pnpm version", () => {
+    expect(repositoryPackageJson.packageManager).toBe("pnpm@10.34.4");
   });
 
   it("uses Node 22 and removes the blocked Render blueprint", () => {
@@ -78,7 +87,7 @@ $env:PATH = 'C:\Users\lqh22\.cache\codex-runtimes\codex-primary-runtime\dependen
 pnpm --filter @codemotion/api test -- vercelConfig.test.ts
 ```
 
-Expected: FAIL because `apps/api/vercel.json` and the Node engine declaration do not exist and `render.yaml` still exists.
+Expected: FAIL because `apps/api/vercel.json` still contains a traditional `functions` mapping. The schema, Node 22.x, pnpm 10.34.4, and removed `render.yaml` assertions should pass.
 
 - [ ] **Step 3: Write the failing Vercel server-module test**
 
@@ -159,12 +168,7 @@ Create `apps/api/vercel.json`:
 
 ```json
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "src/server.ts": {
-      "maxDuration": 60
-    }
-  }
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
 ```
 

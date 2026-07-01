@@ -13,7 +13,7 @@ The CodeMotion APK needs a public HTTPS API that can call the official Lanxin co
 - Deploy the existing Express API on Vercel without rewriting its routes or providers.
 - Keep all Lanxin credentials in Vercel environment variables.
 - Preserve `https://localhost` as the Capacitor application origin.
-- Allow real model calls enough time to complete on the Vercel Hobby plan.
+- Retain the Lanxin provider's enforced 45-second upstream timeout.
 - Produce repeatable health, real-provider, fallback, APK, and cloud-device evidence.
 
 ## Non-Goals
@@ -25,9 +25,11 @@ The CodeMotion APK needs a public HTTPS API that can call the official Lanxin co
 
 ## Architecture
 
-Vercel will import the existing GitHub repository as a monorepo project with `apps/api` as its Root Directory. Vercel's Express detection will use `apps/api/src/server.ts` as the application entry. That file will export the configured Express instance as its default export when running on Vercel and will retain local `app.listen` behavior outside Vercel.
+Vercel will import the existing GitHub repository as a monorepo project with `apps/api` as its Root Directory. Vercel's zero-config Express detection will use the default-exported Express app in `apps/api/src/server.ts` as the application entry and will use Fluid Compute by default. That file retains local `app.listen` behavior outside Vercel.
 
-`apps/api/vercel.json` will configure the recognized server entry as one Node.js function with a 60-second maximum duration. `apps/api/package.json` will request Node 22.x. The API routes and response schemas remain unchanged.
+`apps/api/vercel.json` will contain only the official schema URL. It will not define a traditional `functions` mapping because that mapping prevents zero-config Express detection when the project Root Directory is `apps/api`. `apps/api/package.json` will request Node 22.x, the repository will pin pnpm 10.34.4, and the Lanxin provider will continue enforcing its 45-second upstream timeout. The API routes and response schemas remain unchanged.
+
+This correction is based on the real Vercel production build for commit `5ed8d1d`, which rejected the configured `src/server.ts` function pattern because it did not match a Serverless Function in an `api` directory. A successful production redeploy is not yet claimed.
 
 The Capacitor application will call the Vercel production origin through `VITE_API_BASE_URL`. Requests flow as follows:
 
@@ -40,7 +42,7 @@ The Capacitor application will call the Vercel production origin through `VITE_A
 ## Repository Changes
 
 - Modify `apps/api/src/server.ts` to export the Express app and avoid opening a listener on Vercel.
-- Create `apps/api/vercel.json` with schema metadata and a 60-second function duration.
+- Create a schema-only `apps/api/vercel.json` without a `functions` mapping.
 - Add Node 22.x to `apps/api/package.json`.
 - Replace the Render configuration contract test with a Vercel deployment contract test.
 - Remove `render.yaml` from the final delivery tree.
@@ -80,9 +82,10 @@ The current `express-rate-limit` memory store remains useful as per-instance pro
 
 Automated tests will verify:
 
-- `vercel.json` targets the Express entry and allows 60 seconds.
+- `vercel.json` keeps the official schema and omits `functions`, preserving zero-config Express detection.
 - `server.ts` exports the Express app without listening when `VERCEL=1`.
 - Node 22.x is declared for the API package.
+- pnpm 10.34.4 is declared for the repository.
 - Removed Render configuration is no longer referenced by active deployment instructions.
 - Existing API and Web test suites remain green.
 

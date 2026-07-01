@@ -6,7 +6,7 @@ const vercel = JSON.parse(
   readFileSync(new URL("vercel.json", apiRoot), "utf8"),
 ) as {
   $schema?: string;
-  functions?: Record<string, { maxDuration?: number }>;
+  functions?: unknown;
 };
 const packageJson = JSON.parse(
   readFileSync(new URL("package.json", apiRoot), "utf8"),
@@ -16,9 +16,9 @@ const repositoryPackageJson = JSON.parse(
 ) as { packageManager?: string };
 
 describe("Vercel API deployment", () => {
-  it("runs the Express entry with the configured 60-second function limit", () => {
+  it("uses zero-config Express detection without traditional function globs", () => {
     expect(vercel.$schema).toBe("https://openapi.vercel.sh/vercel.json");
-    expect(vercel.functions?.["src/server.ts"]?.maxDuration).toBe(60);
+    expect(vercel.functions).toBeUndefined();
   });
 
   it("uses a Vercel-compatible pnpm version", () => {
