@@ -9,3 +9,7 @@ dist/
 .env.*
 !.env.example
 !apps/**/.env.example
+.release/
+**/keystore.properties
+*.jks
+*.keystore
