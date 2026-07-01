@@ -8,12 +8,12 @@
     "apps/web"
   ],
   "scripts": {
-    "dev": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api dev",
-    "dev:api": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api dev",
-    "dev:web": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web dev",
-    "build": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api build && call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web build",
-    "test": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api test && call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web test",
-    "test:api": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/api test",
-    "test:web": "call \"%npm_node_execpath%\" \"%npm_execpath%\" --filter @codemotion/web test"
+    "dev": "pnpm --filter @codemotion/api dev",
+    "dev:api": "pnpm --filter @codemotion/api dev",
+    "dev:web": "pnpm --filter @codemotion/web dev",
+    "build": "pnpm --filter @codemotion/api build && pnpm --filter @codemotion/web build",
+    "test": "pnpm --filter @codemotion/api test && pnpm --filter @codemotion/web test",
+    "test:api": "pnpm --filter @codemotion/api test",
+    "test:web": "pnpm --filter @codemotion/web test"
   }
 }
