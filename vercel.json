@@ -1,18 +1,17 @@
 {
-  "version": 2,
-  "buildCommand": "pnpm --filter @codemotion/api build && pnpm --dir apps/web build",
   "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @codemotion/api build",
   "builds": [
     {
-      "src": "apps/web/dist",
-      "use": "@vercel/static"
+      "src": "apps/web/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
       "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": "apps/api/dist/**"
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
