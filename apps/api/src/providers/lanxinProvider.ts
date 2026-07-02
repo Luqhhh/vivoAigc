@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { ZodError } from "zod";
+
 import type { AppEnv } from "../env.js";
 import { buildAnalysisPrompt, buildTutorPrompt } from "../prompt.js";
 import {
@@ -14,6 +16,11 @@ import type {
 } from "../types.js";
 
 const REQUEST_TIMEOUT_MS = 45_000;
+const MAX_VALIDATION_ISSUES = 8;
+const MAX_VALIDATION_PATH_LENGTH = 96;
+const MAX_VALIDATION_DIAGNOSTICS_LENGTH = 384;
+const MAX_RENDERED_PATH_INDEX = 9_999;
+const DYNAMIC_RECORD_FIELDS = new Set(["variables", "params", "locals", "args"]);
 
 interface LanxinConfig {
   url: string;
@@ -27,6 +34,57 @@ export class LanxinProviderError extends Error {
     super(message);
     this.name = "LanxinProviderError";
   }
+}
+
+function renderValidationPath(path: (string | number)[]): string {
+  if (path.length === 0) {
+    return "<root>";
+  }
+
+  const rendered = path
+    .map((segment, index) => {
+      const previous = path[index - 1];
+      if (typeof previous === "string" && DYNAMIC_RECORD_FIELDS.has(previous)) {
+        return "<key>";
+      }
+      if (typeof segment === "number") {
+        return Number.isSafeInteger(segment) &&
+          segment >= 0 &&
+          segment <= MAX_RENDERED_PATH_INDEX
+          ? String(segment)
+          : "<index>";
+      }
+      return segment;
+    })
+    .join(".");
+
+  if (rendered.length <= MAX_VALIDATION_PATH_LENGTH) {
+    return rendered;
+  }
+  const suffix = ".<truncated>";
+  return `${rendered.slice(0, MAX_VALIDATION_PATH_LENGTH - suffix.length)}${suffix}`;
+}
+
+function validationError(message: string, error: unknown): LanxinProviderError {
+  if (!(error instanceof ZodError)) {
+    return new LanxinProviderError(message);
+  }
+
+  const issues: string[] = [];
+  let diagnosticsLength = 0;
+  for (const issue of error.issues.slice(0, MAX_VALIDATION_ISSUES)) {
+    const summary = `${issue.code}@${renderValidationPath(issue.path)}`;
+    const separatorLength = issues.length > 0 ? 2 : 0;
+    if (
+      diagnosticsLength + separatorLength + summary.length >
+      MAX_VALIDATION_DIAGNOSTICS_LENGTH
+    ) {
+      break;
+    }
+    issues.push(summary);
+    diagnosticsLength += separatorLength + summary.length;
+  }
+  return new LanxinProviderError(`${message}[${issues.join(", ")}]`);
 }
 
 function ensureConfig(env: AppEnv): LanxinConfig {
@@ -177,7 +235,7 @@ export async function analyzeWithLanxin(
     if (error instanceof LanxinProviderError) {
       throw error;
     }
-    throw new LanxinProviderError("蓝心代码分析结果校验失败。");
+    throw validationError("蓝心代码分析结果校验失败。", error);
   }
 }
 
@@ -195,6 +253,6 @@ export async function answerWithLanxinTutor(
     if (error instanceof LanxinProviderError) {
       throw error;
     }
-    throw new LanxinProviderError("蓝心导师结果校验失败。");
+    throw validationError("蓝心导师结果校验失败。", error);
   }
 }

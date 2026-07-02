@@ -272,15 +272,83 @@ describe("Lanxin provider", () => {
     );
   });
 
-  it("normalizes schema-invalid model JSON", async () => {
-    const invalid = completeAnalysis();
-    invalid.traceSteps = [];
+  it("reports safe schema issue paths for invalid analysis JSON", async () => {
+    const distinctiveInvalidValue = "ANALYSIS_PRIVATE_VALUE_7f43";
+    const invalid = {
+      ...completeAnalysis(),
+      title: { distinctiveInvalidValue },
+      traceSteps: [],
+    };
     globalThis.fetch = vi
       .fn<typeof fetch>()
       .mockResolvedValue(jsonResponse({ content: JSON.stringify(invalid) }));
 
-    await expect(analyzeWithLanxin(analysisRequest, env)).rejects.toBeInstanceOf(
-      LanxinProviderError,
+    const error = await analyzeWithLanxin(analysisRequest, env).catch(
+      (caught: unknown) => caught,
     );
+
+    expect(error).toBeInstanceOf(LanxinProviderError);
+    expect((error as Error).message).toBe(
+      "蓝心代码分析结果校验失败。[invalid_type@title, too_small@traceSteps]",
+    );
+    expect(
+      JSON.stringify({
+        name: (error as Error).name,
+        message: (error as Error).message,
+      }),
+    ).not.toContain(distinctiveInvalidValue);
+  });
+
+  it("redacts model-controlled record keys from analysis issue paths", async () => {
+    const distinctiveRecordKey = `MODEL_PRIVATE_KEY_${"x".repeat(1_000)}`;
+    const invalid = completeAnalysis();
+    (invalid.traceSteps[0].variables as Record<string, unknown>)[
+      distinctiveRecordKey
+    ] = { invalid: true };
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ content: JSON.stringify(invalid) }));
+
+    const error = await analyzeWithLanxin(analysisRequest, env).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(LanxinProviderError);
+    expect((error as Error).message).toBe(
+      "蓝心代码分析结果校验失败。[invalid_union@traceSteps.0.variables.<key>]",
+    );
+    expect((error as Error).message).not.toContain(distinctiveRecordKey);
+    expect((error as Error).message.length).toBeLessThanOrEqual(
+      "蓝心代码分析结果校验失败。[]".length + 384,
+    );
+  });
+
+  it("bounds safe schema issue paths for invalid tutor JSON", async () => {
+    const distinctiveInvalidValue = "TUTOR_PRIVATE_VALUE_9c81";
+    const invalid = {
+      ...completeTutor(),
+      referencedSteps: Array.from(
+        { length: 10 },
+        (_, index) => `${distinctiveInvalidValue}-${index}`,
+      ),
+    };
+    globalThis.fetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ content: JSON.stringify(invalid) }));
+
+    const error = await answerWithLanxinTutor(tutorRequest, env).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(LanxinProviderError);
+    expect((error as Error).message).toBe(
+      "蓝心导师结果校验失败。" +
+        "[invalid_type@referencedSteps.0, invalid_type@referencedSteps.1, " +
+        "invalid_type@referencedSteps.2, invalid_type@referencedSteps.3, " +
+        "invalid_type@referencedSteps.4, invalid_type@referencedSteps.5, " +
+        "invalid_type@referencedSteps.6, invalid_type@referencedSteps.7]",
+    );
+    expect((error as Error).message).not.toContain("referencedSteps.8");
+    expect((error as Error).message).not.toContain(distinctiveInvalidValue);
   });
 });
