@@ -13,7 +13,7 @@ The CodeMotion APK needs a public HTTPS API that can call the official Lanxin co
 - Deploy the existing Express API on Vercel without rewriting its routes or providers.
 - Keep all Lanxin credentials in Vercel environment variables.
 - Preserve `https://localhost` as the Capacitor application origin.
-- Retain the Lanxin provider's enforced 45-second upstream timeout.
+- Retain the Lanxin provider's enforced 60-second upstream timeout.
 - Produce repeatable health, real-provider, fallback, APK, and cloud-device evidence.
 
 ## Non-Goals
@@ -25,9 +25,9 @@ The CodeMotion APK needs a public HTTPS API that can call the official Lanxin co
 
 ## Architecture
 
-Vercel will import the existing GitHub repository as a monorepo project with `apps/api` as its Root Directory. Vercel's zero-config Express detection will use the default-exported Express app in `apps/api/src/server.ts` as the application entry and will use Fluid Compute by default. That file retains local `app.listen` behavior outside Vercel.
+Vercel will import the existing GitHub repository as a monorepo project with `apps/api` as its Root Directory. Vercel's zero-config Express detection will use the default-exported Express app in `apps/api/src/server.ts` as the application entry. The Vercel Project API verified `defaultResourceConfig.fluid=true` and `resourceConfig.fluid=true`. Fluid Compute must remain enabled so the function duration exceeds the Lanxin provider's 60-second timeout and leaves headroom for fallback and serialization; if Fluid is disabled, the provider timeout and function runtime must be reconsidered. That file retains local `app.listen` behavior outside Vercel.
 
-`apps/api/vercel.json` will contain only the official schema URL. It will not define a traditional `functions` mapping because that mapping prevents zero-config Express detection when the project Root Directory is `apps/api`. `apps/api/package.json` will request Node 22.x, the repository will pin pnpm 10.34.4, and the Lanxin provider will continue enforcing its 45-second upstream timeout. The API routes and response schemas remain unchanged.
+`apps/api/vercel.json` will contain only the official schema URL. It will not define a traditional `functions` mapping because that mapping prevents zero-config Express detection when the project Root Directory is `apps/api`. `apps/api/package.json` will request Node 22.x, the repository will pin pnpm 10.34.4, and the Lanxin provider will continue enforcing its 60-second upstream timeout. Commit `f301ebf` made this change after production observed a 44.5-second response and an abort at the former exact timeout boundary. The API routes and response schemas remain unchanged.
 
 This correction is based on the real Vercel production build for commit `5ed8d1d`, which rejected the configured `src/server.ts` function pattern because it did not match a Serverless Function in an `api` directory. A successful production redeploy is not yet claimed.
 

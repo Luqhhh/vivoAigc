@@ -59,7 +59,7 @@
 | AC-PRACTICE-001 | P1 | 推荐相似练习 | PENDING | 推荐展示与返回工作台测试文件已覆盖 | `evidence/screenshots/practice-recommendations.png` | 待确认至少 3 条及字段完整。 |
 | AC-UI-001 | P1 | 移动端 360px 无布局破坏 | PENDING | 360x800 与 1440x1000 浏览器审计加组件测试 | `evidence/screenshots/mobile/workbench-360.png`；`evidence/screenshots/mobile/analysis-360.png`；`evidence/screenshots/mobile/examples-360.png`；`evidence/visual/browser-audit.json` | 尚未完成 390x844、430x932 和全部页签的视觉证据。 |
 | AC-ERR-001 | P1 | 接口失败有可恢复提示 | PENDING | 离线、分析失败、重试、过期响应和敏感错误隐藏测试通过 | `evidence/logs/verification-summary.md` | 自动化通过；缺少按验收步骤采集的浏览器错误与恢复证据。 |
-| AC-PERF-001 | P1 | 首屏和播放响应达标 | PENDING | 无符合规格的计时证据 | `evidence/performance/lighthouse.json`；`evidence/performance/manual-timing.md`；`evidence/logs/api-duration.txt` | APK 启动和 real 45 秒超时未执行。 |
+| AC-PERF-001 | P1 | 首屏和播放响应达标 | PENDING | 无符合规格的计时证据 | `evidence/performance/lighthouse.json`；`evidence/performance/manual-timing.md`；`evidence/logs/api-duration.txt` | 运行前提是 Fluid Compute 保持启用，且函数执行时长超过 60 秒 provider 超时；APK 启动和 real 超时计时证据未执行。 |
 | AC-A11Y-001 | P2 | 基础按钮和颜色可访问 | PENDING | 部分 aria-label、status 和键盘相关组件测试文件已覆盖 | `evidence/accessibility/axe-results.json`；`evidence/screenshots/keyboard-focus.png`；`evidence/screenshots/contrast-check.png` | 需工具扫描加人工键盘验证。 |
 
 ## 5. AI Harness 数据集

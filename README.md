@@ -29,10 +29,12 @@ apps/api: Express + TypeScript + Zod
           |
           +--> mock provider（默认、确定性结果）
           |
-          +--> Lanxin adapter（服务端凭据、45 秒超时、结构校验）
+          +--> Lanxin adapter（服务端凭据、60 秒超时、结构校验）
                          |
                          +--> 失败时返回 fallback 结果
 ```
+
+Vercel 部署必须保持 Fluid Compute 启用，并确保函数执行时长超过 Lanxin provider 的 60 秒超时，为 fallback 和序列化保留余量。
 
 ## 目录
 
