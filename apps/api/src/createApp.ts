@@ -1,7 +1,12 @@
 import { randomBytes } from "node:crypto";
 
 import cors, { type CorsOptions } from "cors";
-import express, { type NextFunction, type Request, type Response } from "express";
+import express, {
+  type Express,
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { ZodError } from "zod";
 
 import { loadEnv, type AppEnv } from "./env.js";
@@ -107,9 +112,10 @@ function defaultRequestLogger(entry: RequestLogEntry): void {
   console.info(JSON.stringify({ event: "http_request", ...entry }));
 }
 
-export function createApp(options: AppOptions = {}) {
+export function createApp(optionsOrApp: AppOptions | Express = {}) {
+  const options = typeof optionsOrApp === "function" ? {} : optionsOrApp;
   const env = normalizeEnv(options);
-  const app = express();
+  const app = typeof optionsOrApp === "function" ? optionsOrApp : express();
   app.set("trust proxy", 1);
   const aiRateLimiter = createAiRateLimiter(options.aiRateLimit ?? 30);
   const requestLogger = options.requestLogger ?? (

@@ -1,8 +1,10 @@
+import express from "express";
+
 import { createApp } from "./createApp.js";
 import { loadEnv } from "./env.js";
 
 const env = loadEnv();
-const app = createApp(env);
+const app = createApp(express());
 
 if (process.env.VERCEL !== "1") {
   app.listen(env.PORT, () => {

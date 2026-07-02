@@ -11,11 +11,17 @@ const vercel = JSON.parse(
 const packageJson = JSON.parse(
   readFileSync(new URL("package.json", apiRoot), "utf8"),
 ) as { engines?: { node?: string } };
+const serverSource = readFileSync(new URL("src/server.ts", apiRoot), "utf8");
 const repositoryPackageJson = JSON.parse(
   readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"),
 ) as { packageManager?: string };
 
 describe("Vercel API deployment", () => {
+  it("directly creates the Express app in the Vercel entrypoint", () => {
+    expect(serverSource).toMatch(/import express from ["']express["'];/);
+    expect(serverSource).toMatch(/createApp\(express\(\)\)/);
+  });
+
   it("keeps the app factory outside Vercel's recognized entrypoint names", () => {
     expect({
       app: existsSync(new URL("src/app.ts", apiRoot)),
