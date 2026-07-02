@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../app.js", () => ({
+vi.mock("../createApp.js", () => ({
   createApp: vi.fn(() => mocks.app),
 }));
 vi.mock("../env.js", () => ({

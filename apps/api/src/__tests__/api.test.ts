@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createApp, type RequestLogEntry } from "../app.js";
+import { createApp, type RequestLogEntry } from "../createApp.js";
 import {
   analyzeWithMock,
   answerWithMockTutor,

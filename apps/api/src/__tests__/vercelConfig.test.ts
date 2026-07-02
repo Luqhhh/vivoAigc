@@ -16,6 +16,13 @@ const repositoryPackageJson = JSON.parse(
 ) as { packageManager?: string };
 
 describe("Vercel API deployment", () => {
+  it("keeps the app factory outside Vercel's recognized entrypoint names", () => {
+    expect({
+      app: existsSync(new URL("src/app.ts", apiRoot)),
+      createApp: existsSync(new URL("src/createApp.ts", apiRoot)),
+    }).toEqual({ app: false, createApp: true });
+  });
+
   it("uses zero-config Express detection without traditional function globs", () => {
     expect(vercel.$schema).toBe("https://openapi.vercel.sh/vercel.json");
     expect(vercel.functions).toBeUndefined();
