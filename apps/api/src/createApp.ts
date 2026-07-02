@@ -42,6 +42,10 @@ export interface RequestLogEntry {
   status: number;
   durationMs: number;
   source?: "lanxin" | "mock" | "fallback";
+  providerError?: {
+    provider: "lanxin";
+    message: string;
+  };
 }
 
 interface ApiErrorDetails {
@@ -127,6 +131,8 @@ export function createApp(optionsOrApp: AppOptions | Express = {}) {
     const startedAt = Date.now();
     res.once("finish", () => {
       const source = res.locals.responseSource as RequestLogEntry["source"];
+      const providerError = res.locals.providerError as
+        RequestLogEntry["providerError"];
       const entry: RequestLogEntry = {
         requestId: res.locals.requestId,
         method: req.method,
@@ -134,6 +140,7 @@ export function createApp(optionsOrApp: AppOptions | Express = {}) {
         status: res.statusCode,
         durationMs: Math.max(0, Date.now() - startedAt),
         ...(source === undefined ? {} : { source }),
+        ...(providerError === undefined ? {} : { providerError }),
       };
 
       try {
@@ -187,6 +194,10 @@ export function createApp(optionsOrApp: AppOptions | Express = {}) {
               throw error;
             }
 
+            res.locals.providerError = {
+              provider: "lanxin",
+              message: error.message,
+            } satisfies RequestLogEntry["providerError"];
             const mock = analyzeWithMock(input);
             return sendSourcedJson(res, {
               ...mock,
@@ -231,6 +242,10 @@ export function createApp(optionsOrApp: AppOptions | Express = {}) {
               throw error;
             }
 
+            res.locals.providerError = {
+              provider: "lanxin",
+              message: error.message,
+            } satisfies RequestLogEntry["providerError"];
             return sendSourcedJson(res, {
               ...answerWithMockTutor(input),
               source: "fallback",

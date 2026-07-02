@@ -1025,15 +1025,17 @@ describe("CodeMotion API", () => {
     expect(response.body.source).toBe("mock");
   });
 
-  it("marks a real-mode tutor provider failure as fallback", async () => {
+  it("logs a safe real-mode tutor provider failure with its fallback request", async () => {
     globalThis.fetch = vi
       .fn<typeof fetch>()
       .mockRejectedValue(new TypeError("network unavailable"));
+    const logs: RequestLogEntry[] = [];
     const app = createApp({
       llmMode: "real",
       LANXIN_API_URL: "https://lanxin.example.test/v1/chat/completions",
-      LANXIN_APP_ID: "test-app-id",
-      LANXIN_APP_KEY: "test-app-key",
+      LANXIN_APP_ID: "tutor-diagnostic-app-id",
+      LANXIN_APP_KEY: "tutor-diagnostic-app-key",
+      requestLogger: (entry) => logs.push(entry),
     });
 
     const response = await request(app)
@@ -1050,6 +1052,23 @@ describe("CodeMotion API", () => {
     expect(response.body.requestId).toBe("req-real-tutor-fallback");
     expect(response.body.referencedSteps).toContain(2);
     expect(response.body.source).toBe("fallback");
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toEqual({
+      requestId: expect.stringMatching(/^req-\d+-[a-f0-9]{8}$/),
+      method: "POST",
+      route: "/api/tutor-chat",
+      status: 200,
+      durationMs: expect.any(Number),
+      source: "fallback",
+      providerError: {
+        provider: "lanxin",
+        message: "蓝心服务请求失败。",
+      },
+    });
+    expect(JSON.stringify(logs[0])).not.toMatch(
+      /tutor-diagnostic-app-(?:id|key)|def fib|print\(fib/i,
+    );
+    expect(JSON.stringify(response.body)).not.toContain("蓝心服务请求失败。");
   });
 
   it("rejects code longer than 200 lines with a suggestion", async () => {
@@ -1067,15 +1086,17 @@ describe("CodeMotion API", () => {
     expect(response.body.error.suggestion.length).toBeGreaterThan(0);
   });
 
-  it("falls back through the real provider path when Lanxin is unavailable", async () => {
+  it("logs a safe real-mode analysis provider failure with its fallback request", async () => {
     globalThis.fetch = vi
       .fn<typeof fetch>()
       .mockRejectedValue(new TypeError("network unavailable"));
+    const logs: RequestLogEntry[] = [];
     const app = createApp({
       llmMode: "real",
       LANXIN_API_URL: "https://lanxin.example.test/v1/chat/completions",
-      LANXIN_APP_ID: "test-app-id",
-      LANXIN_APP_KEY: "test-app-key",
+      LANXIN_APP_ID: "analysis-diagnostic-app-id",
+      LANXIN_APP_KEY: "analysis-diagnostic-app-key",
+      requestLogger: (entry) => logs.push(entry),
     });
 
     const response = await request(app)
@@ -1093,5 +1114,22 @@ describe("CodeMotion API", () => {
         },
       ]),
     );
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toEqual({
+      requestId: response.body.requestId,
+      method: "POST",
+      route: "/api/analyze-code",
+      status: 200,
+      durationMs: expect.any(Number),
+      source: "fallback",
+      providerError: {
+        provider: "lanxin",
+        message: "蓝心服务请求失败。",
+      },
+    });
+    expect(JSON.stringify(logs[0])).not.toMatch(
+      /analysis-diagnostic-app-(?:id|key)|def fib|print\(fib/i,
+    );
+    expect(JSON.stringify(response.body)).not.toContain("蓝心服务请求失败。");
   });
 });
