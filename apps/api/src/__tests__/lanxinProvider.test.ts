@@ -81,6 +81,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -103,6 +104,23 @@ describe("CodeMotion Lanxin prompts", () => {
     expect(prompt).toContain("JSON");
     expect(prompt).toContain("CodeAnalyzeResponse");
     expect(prompt).toMatch(/不要.*Markdown|禁止.*Markdown/);
+
+    const requiredNestedContract = [
+      "Every object must contain exactly the listed keys and no extra keys",
+      "requestId: non-empty string",
+      'source: "lanxin"',
+      "complexity: { time: string; space: string; explanation: string }",
+      'lineExplanations: array of { line: positive integer; code: string; explanation: string; role: "input" | "condition" | "loop" | "recursive-call" | "return" | "state-update" | "output" | "other" }',
+      'traceSteps: non-empty array of { step: positive integer; line: positive integer; event: "start" | "assign" | "condition" | "call" | "return" | "loop" | "push" | "pop" | "output" | "end"; description: string; variables: record<string, PrimitiveValue>; changedVariables: string[]; stdout?: string; activeFrameId?: string; activeRecursionNodeId?: string }',
+      'stackFrames: array of { step: positive integer; frames: array of { id: string; functionName: string; line: positive integer; params: record<string, PrimitiveValue>; locals: record<string, PrimitiveValue>; status: "active" | "waiting" | "returned"; returnValue?: PrimitiveValue } }',
+      'recursionTree?: { rootId: string; nodes: array of { id: string; label: string; functionName: string; args: record<string, PrimitiveValue>; status: "pending" | "active" | "returned"; returnValue?: PrimitiveValue; enterStep: positive integer; exitStep?: positive integer }; edges: array of { from: string; to: string; label?: string } }',
+      'recommendations: array of { id: string; title: string; difficulty: "beginner" | "intermediate" | "advanced"; concepts: string[]; reason: string; visualizationHint: string; starterPrompt?: string }',
+      'warnings: array of { code: "CODE_TOO_LONG" | "UNSUPPORTED_LANGUAGE" | "TRACE_PARTIAL" | "MODEL_FORMAT_REPAIRED" | "VISUALIZATION_LIMITED" | "MOCK_USED"; message: string }',
+      "PrimitiveValue = string | number | boolean | null",
+    ];
+    expect(
+      requiredNestedContract.filter((fragment) => !prompt.includes(fragment)),
+    ).toEqual([]);
   });
 
   it("uses explicit defaults and marks absent stdin", () => {
@@ -270,6 +288,32 @@ describe("Lanxin provider", () => {
     await expect(analyzeWithLanxin(analysisRequest, env)).rejects.toBeInstanceOf(
       LanxinProviderError,
     );
+  });
+
+  it("aborts a pending request at 60 seconds but not before", async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | null | undefined;
+    globalThis.fetch = vi.fn<typeof fetch>((_input, init) => {
+      signal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener(
+          "abort",
+          () => reject(signal?.reason ?? new DOMException("Aborted", "AbortError")),
+          { once: true },
+        );
+      });
+    });
+
+    const result = analyzeWithLanxin(analysisRequest, env).catch(
+      (error: unknown) => error,
+    );
+
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(signal?.aborted).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(signal?.aborted).toBe(true);
+    await expect(result).resolves.toBeInstanceOf(LanxinProviderError);
   });
 
   it("reports safe schema issue paths for invalid analysis JSON", async () => {

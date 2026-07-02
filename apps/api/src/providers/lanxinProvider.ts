@@ -15,7 +15,7 @@ import type {
   TutorChatResponse,
 } from "../types.js";
 
-const REQUEST_TIMEOUT_MS = 45_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_VALIDATION_ISSUES = 8;
 const MAX_VALIDATION_PATH_LENGTH = 96;
 const MAX_VALIDATION_DIAGNOSTICS_LENGTH = 384;

@@ -14,7 +14,21 @@ export function buildAnalysisPrompt(request: CodeAnalyzeRequest): string {
 
 必须只返回严格有效的 JSON 对象，不要使用 Markdown、代码围栏或任何 JSON 之外的文字。
 返回对象必须完整符合 CodeAnalyzeResponse：包含 requestId、language、title、summary、detectedConcepts、complexity、lineExplanations、traceSteps、stackFrames、可选 recursionTree、recommendations、warnings、source。
-language 必须是 python；traceSteps 至少一项；所有行号和步骤号必须为正整数；不要编造代码中不存在的行为。
+以下输出契约中，未标记 ? 的字段均为必填字段。Every object must contain exactly the listed keys and no extra keys；record 允许任意字符串键，但值必须符合指定类型。
+PrimitiveValue = string | number | boolean | null
+CodeAnalyzeResponse = {
+requestId: non-empty string；可使用任意非空字符串，不要求特定格式；
+language: "python"；title: string；summary: string；detectedConcepts: string[]；
+complexity: { time: string; space: string; explanation: string }；
+lineExplanations: array of { line: positive integer; code: string; explanation: string; role: "input" | "condition" | "loop" | "recursive-call" | "return" | "state-update" | "output" | "other" }；
+traceSteps: non-empty array of { step: positive integer; line: positive integer; event: "start" | "assign" | "condition" | "call" | "return" | "loop" | "push" | "pop" | "output" | "end"; description: string; variables: record<string, PrimitiveValue>; changedVariables: string[]; stdout?: string; activeFrameId?: string; activeRecursionNodeId?: string }；
+stackFrames: array of { step: positive integer; frames: array of { id: string; functionName: string; line: positive integer; params: record<string, PrimitiveValue>; locals: record<string, PrimitiveValue>; status: "active" | "waiting" | "returned"; returnValue?: PrimitiveValue } }；
+recursionTree?: { rootId: string; nodes: array of { id: string; label: string; functionName: string; args: record<string, PrimitiveValue>; status: "pending" | "active" | "returned"; returnValue?: PrimitiveValue; enterStep: positive integer; exitStep?: positive integer }; edges: array of { from: string; to: string; label?: string } }；
+recommendations: array of { id: string; title: string; difficulty: "beginner" | "intermediate" | "advanced"; concepts: string[]; reason: string; visualizationHint: string; starterPrompt?: string }；
+warnings: array of { code: "CODE_TOO_LONG" | "UNSUPPORTED_LANGUAGE" | "TRACE_PARTIAL" | "MODEL_FORMAT_REPAIRED" | "VISUALIZATION_LIMITED" | "MOCK_USED"; message: string }；
+source: "lanxin"
+}
+不要编造代码中不存在的行为。
 
 Python 代码：
 ${request.code}`;
